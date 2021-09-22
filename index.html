@@ -352,231 +352,22 @@
       
         
           
-            <h3 id="Spark模块"><a href="#Spark模块" class="headerlink" title="Spark模块"></a>Spark模块</h3><h4 id="Spark-Core"><a href="#Spark-Core" class="headerlink" title="Spark Core"></a>Spark Core</h4><p>Spark Core 是 Spark 的核心，其包含如下几个部分：</p>
-<ul>
-<li>Spark基础配置<ul>
-<li>SparkConf（配置信息）</li>
-<li>SparkContext（Spark上下文）</li>
-<li>SparkRPC（远程调用）</li>
-<li>ListenerBus（事件总线）</li>
-<li>MetricsSystem（度量系统）</li>
-<li>SparkEnv（环境变量）</li>
-</ul>
-</li>
-<li>存储系统<ul>
-<li>内存</li>
-<li>磁盘</li>
-</ul>
-</li>
-<li>计算层<ul>
-<li>内存管理</li>
-<li>任务管理</li>
-<li>Task管理</li>
-<li>shuffle管理</li>
-</ul>
-</li>
-<li>调度层<ul>
-<li>DAG调度</li>
-<li>Task调度</li>
-</ul>
-</li>
-</ul>
-<h5 id="Spark基础配置"><a href="#Spark基础配置" class="headerlink" title="Spark基础配置"></a>Spark基础配置</h5><p>sparkContext 是 spark 应用程序的入口，spark 应用程序的提交和执行离不开 sparkContext，它隐藏了网络通信，分布式部署，消息通信，存储体系，计算存储等，开发人员只需要通过 sparkContext 等 api 进行开发即可。</p>
-<p>sparkRpc 基于 netty 实现，分为异步和同步两种方式。ListenerBus主要用于 sparkContext 组件间的交换，它属于监听者模式，采用异步调用。MetricsSystem主要用于系统的运行监控。</p>
-<h5 id="spark-存储层"><a href="#spark-存储层" class="headerlink" title="spark 存储层"></a>spark 存储层</h5><p>它用于管理 spark 运行中依赖的数据存储方式和存储位置，spark 的存储系统优先考虑在各节点以内存的方式存储数据，内存不足时将数据写入磁盘中，这也是 spark 计算性能高的重要原因。</p>
-<p>我们可以灵活的控制数据存储在内存还是磁盘中，同时可以通过远程网络调用将结果输出到远程存储中，比如 hdfs，hbase 等。</p>
-<h5 id="spark-调度层"><a href="#spark-调度层" class="headerlink" title="spark 调度层"></a>spark 调度层</h5><p>spark 调度系统主要由 DAGScheduler 和 TaskScheduler 组成。</p>
-<p>DAGScheduler 主要是把一个 Job 根据 RDD 间的依赖关系，划分为多个 Stage，对于划分后的每个 Stage 都抽象为一个或多个 Task 组成的任务集，并交给 TaskScheduler 来进行进一步的任务调度。而 TaskScheduler 负责对每个具体的 Task 进行调度。</p>
-<p>具体调度算法有 FIFO，FAIR：</p>
-<ul>
-<li>FIFO 调度：先进先出，这是 Spark 默认的调度模式。</li>
-<li>FAIR 调度：支持将作业分组到池中，并为每个池设置不同的调度权重，任务可以按照权重来决定执行顺序。</li>
-</ul>
-<h4 id="Spark-SQL"><a href="#Spark-SQL" class="headerlink" title="Spark SQL"></a>Spark SQL</h4><p>spark sql 提供了基于 sql 的数据处理方法，使得分布式的数据集处理变的更加简单，这也是 spark 广泛使用的重要原因。</p>
-<p>目前大数据相关计算引擎一个重要的评价指标就是：是否支持 sql，这样才会降低使用者的门槛。spark sql 提供了两种抽象的数据集合 DataFrame 和 DataSet。</p>
-<p>DataFrame 是 spark Sql 对结构化数据的抽象，可以简单的理解为 spark 中的表，相比较于 RDD 多了数据的表结构信息(schema).DataFrame = Data + schema</p>
-<p>RDD 是分布式对象集合，DataFrame 是分布式 Row 的集合，提供了比 RDD 更丰富的算子，同时提升了数据的执行效率。</p>
-<p>DataSet 是数据的分布式集合 ，它具有 RDD 强类型的优点 和 Spark SQL 优化后执行的优点。DataSet 可以由 jvm 对象构建，然后使用 map，filter，flatmap 等操作函数操作。</p>
-<h4 id="Spark-Streaming"><a href="#Spark-Streaming" class="headerlink" title="Spark Streaming"></a>Spark Streaming</h4><p>这个模块主要是对流数据的处理，支持流数据的可伸缩和容错处理，可以与 Flume 和 Kafka 等已建立的数据源集成。Spark Streaming 的实现，也使用 RDD 抽象的概念，使得在为流数据编写应用程序时更为方便。</p>
-<h3 id="Spark特点"><a href="#Spark特点" class="headerlink" title="Spark特点"></a>Spark特点</h3><ul>
-<li>计算速度快<ul>
-<li>DAG优化执行</li>
-<li>RDD内存中高速迭代计算</li>
-<li>比MapReduce快100倍</li>
-</ul>
-</li>
-<li>易于使用<ul>
-<li>80多个高级的运算操作</li>
-<li>支持丰富的算子</li>
-<li>支持多种语言开发<ul>
-<li>java</li>
-<li>scala</li>
-<li>python</li>
-<li>R</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>通用大数据框架<ul>
-<li>Spark批处理</li>
-<li>Spark SQL</li>
-<li>Spark Streaming流式数据计算</li>
-<li>Spark ML Lib机器学习</li>
-<li>Spark GraphX 图计算</li>
-</ul>
-</li>
-<li>支持多种ResourceManager<ul>
-<li>Local</li>
-<li>Standalone</li>
-<li>YARN</li>
-<li>mesos</li>
-<li>k8s</li>
-</ul>
-</li>
-<li>Spark生态圈丰富<ul>
-<li>支持大数据存储支持<ul>
-<li>HDFS</li>
-<li>Hbase</li>
-<li>…</li>
-</ul>
-</li>
-<li>支持流式计算，批量计算-Spark Submit &amp; Spark Streaming</li>
-<li>即时查询-Spark SQL</li>
-<li>权衡查询-Blink DB</li>
-<li>机器学习-ML lib</li>
-<li>图计算-GraphX</li>
-<li>数学计算-Spark R</li>
-<li>自然语言处理</li>
-<li>语音识别等</li>
-</ul>
-</li>
-</ul>
-<h3 id="Spark运行模式"><a href="#Spark运行模式" class="headerlink" title="Spark运行模式"></a>Spark运行模式</h3><table>
-<thead>
-<tr>
-<th align="center">运行模式</th>
-<th align="center">运行类型</th>
-<th align="center">说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">local</td>
-<td align="center">本地模式</td>
-<td align="center">常用于本地开发测试，分为local单线程和local-cluster多线程模式</td>
-</tr>
-<tr>
-<td align="center">standalone</td>
-<td align="center">集群模式</td>
-<td align="center">独立模式，在spark自己的资源调度管理框架上运行，该框架采用master/salve结构</td>
-</tr>
-<tr>
-<td align="center">yarn</td>
-<td align="center">集群模式</td>
-<td align="center">在yarn资源管理器框架上运行，由yarn负责资源管理，spark负责任务调度和计算</td>
-</tr>
-<tr>
-<td align="center">mesos</td>
-<td align="center">集群模式</td>
-<td align="center">在mesos资源管理器框架上运行，由mesos负责资源管理，spark负责任务调度和计算</td>
-</tr>
-<tr>
-<td align="center">k8s</td>
-<td align="center">集群模式</td>
-<td align="center">在k8s上运行</td>
-</tr>
-</tbody></table>
-<h3 id="Spark核心概念"><a href="#Spark核心概念" class="headerlink" title="Spark核心概念"></a>Spark核心概念</h3><p><img src="/images/spark-%E9%9B%86%E7%BE%A4%E8%A7%92%E8%89%B2.png" alt="spark-集群角色"></p>
-<h4 id="Cluster-Manager"><a href="#Cluster-Manager" class="headerlink" title="Cluster Manager"></a>Cluster Manager</h4><p>集群管理器，它存在于 Master 进程中，主要用来对应用程序申请的资源进行管理，根据其部署模式的不同，可以分为 local，standalone，yarn，mesos 等模式。</p>
-<h4 id="worker"><a href="#worker" class="headerlink" title="worker"></a>worker</h4><p>worker 是 spark 的工作节点，用于执行任务的提交，主要工作职责有下面四点：</p>
-<ul>
-<li>worker 节点通过注册机向 cluster manager 汇报自身的 cpu，内存等信息。</li>
-<li>worker 节点在 spark master 作用下创建并启用 executor，executor 是真正的计算单元。</li>
-<li>spark master 将任务 Task 分配给 worker 节点上的 executor 并执行运用。</li>
-<li>worker 节点同步资源信息和 executor 状态信息给 cluster manager。</li>
-</ul>
-<p><img src="/images/spark-worker-executor.png" alt="spark-worker-executor"></p>
-<p>在 yarn 模式下运行 worker 节点一般指的是 NodeManager 节点，standalone 模式下运行一般指的是 slave 节点。</p>
-<h4 id="executor"><a href="#executor" class="headerlink" title="executor"></a>executor</h4><p>executor 是真正执行计算任务的组件，它是 application 运行在 worker 上的一个进程。这个进程负责 Task 的运行，它能够将数据保存在内存或磁盘存储中，也能够将结果数据返回给 Driver。</p>
-<h4 id="Application"><a href="#Application" class="headerlink" title="Application"></a>Application</h4><p>application 是 Spark API 编程的应用程序，它包括实现 Driver 功能的代码和在程序中各个 executor 上要执行的代码，一个 application 由多个 job 组成。其中应用程序的入口为用户所定义的 main 方法。</p>
-<h4 id="Driver"><a href="#Driver" class="headerlink" title="Driver"></a>Driver</h4><p>驱动器节点，它是一个运行 Application 中 main 函数并创建 SparkContext 的进程。application 通过 Driver 和 Cluster Manager 及 executor 进行通讯。它可以运行在 application 节点上，也可以由 application 提交给 Cluster Manager，再由 Cluster Manager 安排 worker 进行运行。</p>
-<p>Driver 节点也负责提交 Job，并将 Job 转化为 Task，在各个 Executor 进程间协调 Task 的调度。</p>
-<ol>
-<li>准备Spark运行环境</li>
-<li>与ClusterManager通讯</li>
-<li>划分RDD并生成DAG</li>
-<li>构建job将每个job拆分成多个task</li>
-<li>任务分配和资源监控</li>
-<li>与spark中的其他组件进行资源协调</li>
-<li>生成并发送Task到Executor</li>
-</ol>
-<h4 id="sparkContext"><a href="#sparkContext" class="headerlink" title="sparkContext"></a>sparkContext</h4><p>sparkContext 是整个 spark 应用程序最关键的一个对象，是 Spark 所有功能的主要入口点。核心作用是初始化 spark 应用程序所需要的组件，同时还负责向 master 程序进行注册等。</p>
-<h4 id="RDD"><a href="#RDD" class="headerlink" title="RDD"></a>RDD</h4><p>它是 Spark 中最重要的一个概念，是弹性分布式数据集，是一种容错的、可以被并行操作的元素集合，是 Spark 对所有数据处理的一种基本抽象。可以通过一系列的算子对 rdd 进行操作，主要分为 Transformation 和 Action 两种操作。</p>
-<ul>
-<li>‍‍‍‍‍Transformation(转换)：是对已有的 RDD 进行换行生成新的 RDD，对于转换过程采用惰性计算机制，不会立即计算出结果。常用的方法有 map，filter，flatmap 等。</li>
-<li>Action(执行)：对已有对 RDD 对数据执行计算产生结果，并将结果返回 Driver 或者写入到外部存储中。常用到方法有 reduce，collect，saveAsTextFile 等。</li>
-</ul>
-<p><img src="/images/spark-rdd-api-executor.png" alt="spark-rdd-api-executor"></p>
-<h4 id="DAG"><a href="#DAG" class="headerlink" title="DAG"></a>DAG</h4><p>DAG 是一个有向无环图，在 Spark 中， 使用 DAG 来描述我们的计算逻辑。主要分为 DAG Scheduler 和 Task Scheduler。</p>
-<p><img src="/images/spark-DAG.png" alt="DAG.png"></p>
-<h5 id="DAG-Scheduler"><a href="#DAG-Scheduler" class="headerlink" title="DAG Scheduler"></a>DAG Scheduler</h5><p>DAG Scheduler 是面向 stage 的高层级的调度器，DAG Scheduler 把 DAG 拆分为多个 Task，每组 Task 都是一个 stage，解析时是以 shuffle 为边界进行反向构建的，每当遇见一个 shuffle，spark 就会产生一个新的 stage，接着以 TaskSet 的形式提交给底层的调度器（task scheduler），每个 stage 封装成一个 TaskSet。DAG Scheduler 需要记录 RDD 被存入磁盘物化等动作，同时会需要 Task 寻找最优等调度逻辑，以及监控因 shuffle 跨节点输出导致的失败。</p>
-<p><img src="/images/spark-dag-scheduler.png" alt="spark-dag-scheduler"></p>
-<h5 id="Task-Scheduler"><a href="#Task-Scheduler" class="headerlink" title="Task Scheduler"></a>Task Scheduler</h5><p>Task Scheduler 负责每一个具体任务的执行。它的主要职责包括</p>
-<ul>
-<li>任务集的调度管理；</li>
-<li>状态结果跟踪；</li>
-<li>物理资源调度管理；</li>
-<li>任务执行；</li>
-<li>获取结果。</li>
-</ul>
-<p><img src="/images/spark-dag-task-scheduler.png" alt="spark-dag-task-scheduler"></p>
-<h4 id="Job"><a href="#Job" class="headerlink" title="Job"></a>Job</h4><p>job 是有多个 stage 构建的并行的计算任务，job 是由 spark 的 action 操作来触发的，在 spark 中一个 job 包含多个 RDD 以及作用在 RDD 的各种操作算子。</p>
-<p><img src="/images/spark-job.png" alt="spark-job"></p>
-<h4 id="Stage"><a href="#Stage" class="headerlink" title="Stage"></a>Stage</h4><p>DAG Scheduler 会把 DAG 切割成多个相互依赖的 Stage，划分 Stage 的一个依据是 RDD 间的宽窄依赖。</p>
-<p>在对 Job 中的所有操作划分 Stage 时，一般会按照倒序进行，即从 Action 开始，遇到窄依赖操作，则划分到同一个执行阶段，遇到宽依赖操作，则划分一个新的执行阶段，且新的阶段为之前阶段的 parent，然后依次类推递归执行。</p>
-<p>child Stage 需要等待所有的 parent Stage 执行完之后才可以执行，这时 Stage 之间根据依赖关系构成了一个大粒度的 DAG。在一个 Stage 内，所有的操作以串行的 Pipeline 的方式，由一组 Task 完成计算。</p>
-<p><img src="/images/spark-stage.png" alt="spark-stage"></p>
-<h4 id="TaskSet"><a href="#TaskSet" class="headerlink" title="TaskSet"></a>TaskSet</h4><p>TaskSet 可以理解为一种任务，对应一个 stage，是 Task 组成的任务集。一个 TaskSet 中的所有 Task 没有 shuffle 依赖可以并行计算。</p>
-<p><img src="/images/spark-taskset.png" alt="spark-taskset"></p>
-<h4 id="Task"><a href="#Task" class="headerlink" title="Task"></a>Task</h4><p>Task 是 spark 中最独立的计算单元，由 Driver Manager 发送到 executer 执行，通常情况一个 task 处理 spark RDD 一个 partition。Task 分为 ShuffleMapTask 和 ResultTask 两种，位于最后一个 Stage 的 Task 为 ResultTask，其他阶段的属于 ShuffleMapTask。</p>
-<p><img src="/images/spark-task.png" alt="spark-task"></p>
-<h3 id="Spark作业执行流程"><a href="#Spark作业执行流程" class="headerlink" title="Spark作业执行流程"></a>Spark作业执行流程</h3><h4 id="Spark作业执行流程-1"><a href="#Spark作业执行流程-1" class="headerlink" title="Spark作业执行流程"></a>Spark作业执行流程</h4><p>spark 应用程序以进程集合为单位在分布式集群上运行，通过 driver 程序的 main 方法创建 sparkContext 的对象与集群进行交互。具体运行流程如下：</p>
-<ul>
-<li>sparkContext 向 cluster Manager 申请 CPU，内存等计算资源。</li>
-<li>cluster Manager 分配应用程序执行所需要的资源，在 worker 节点创建 executor。</li>
-<li>sparkContext 将程序代码和 task 任务发送到 executor 上进行执行，代码可以是编译成的 jar 包或者 python 文件等。接着 sparkContext 会收集结果到 Driver 端。</li>
-</ul>
-<p><img src="/images/spark-job-workflow.png" alt="spark-job-workflow"></p>
-<h4 id="Spark-RDD迭代过程"><a href="#Spark-RDD迭代过程" class="headerlink" title="Spark-RDD迭代过程"></a>Spark-RDD迭代过程</h4><ul>
-<li>sparkContext 创建 RDD 对象，计算 RDD 间的依赖关系，并组成一个 DAG 有向无环图。</li>
-<li>DAGScheduler 将 DAG 划分为多个 stage，并将 stage 对应的 TaskSet 提交到集群的管理中心，stage 的划分依据是 RDD 中的宽窄依赖，spark 遇见宽依赖就会划分为一个 stage，每个 stage 中包含来一个或多个 task 任务，避免多个 stage 之间消息传递产生的系统开销。</li>
-<li>TaskScheduler 通过集群管理中心为每一个 task 申请资源并将 task 提交到 worker 的节点上进行执行。</li>
-<li>worker 上的 executor 执行具体的任务。</li>
-</ul>
-<p><img src="/images/spark-rdd-executor.png" alt="spark-rdd-executor"></p>
-<h4 id="Spark-On-YARN"><a href="#Spark-On-YARN" class="headerlink" title="Spark On YARN"></a>Spark On YARN</h4><h5 id="ResourceManager"><a href="#ResourceManager" class="headerlink" title="ResourceManager"></a>ResourceManager</h5><p>spark 程序一般是运行在集群上的，spark on yarn 是工作或生产上用的非常多的一种运行模式。</p>
-<p>没有 yarn 模式前，每个分布式框架都要跑在一个集群上面，比如说 Hadoop 要跑在一个集群上，Spark 用集群的时候跑在 standalone 上。这样的话整个集群的资源的利用率低，且管理起来比较麻烦。</p>
-<p>yarn 是分布式资源管理和任务管理管理，主要由 ResourceManager，NodeManager 和 ApplicationMaster 三个模块组成。</p>
-<p><img src="/images/spark-yarn-resourcemanager.png" alt="spark-yarn-resourcemanager"></p>
-<p>ResourceManager 主要负责集群的资源管理，监控和分配。对于所有的应用它有绝对的控制权和资源管理权限。</p>
-<p>NodeManager 负责节点的维护，执行和监控 task 运行状况。会通过心跳的方式向 ResourceManager 汇报自己的资源使用情况。</p>
-<p>yarn 资源管理器的每个节点都运行着一个 NodeManager，是 ResourceManager 的代理。如果主节点的 ResourceManager 宕机后，会连接 ResourceManager 的备用节点。</p>
-<p>ApplicationMaster 负责具体应用程序的调度和资源的协调，它会与 ResourceManager 协商进行资源申请。ResourceManager 以 container 容器的形式将资源分配给 application 进行运行。同时负责任务的启停。</p>
-<p>container 是资源的抽象，它封装着每个节点上的资源信息(cpu,内存，磁盘，网络等)，yarn 将任务分配到 container 上运行，同时该任务只能使用 container 描述的资源，达到各个任务间资源的隔离。</p>
-<h5 id="运行模式"><a href="#运行模式" class="headerlink" title="运行模式"></a>运行模式</h5><p>spark on yarn 分为两种模式 yarn-client 模式，和 yarn—cluster 模式，一般线上采用的是 yarn-cluster 模式。</p>
-<p><strong>yarn-client 模式</strong></p>
-<p>driver 在客户端本地执行，这种模式可以使得 spark application 和客户端进行交互，因为 driver 在客户端可以通过 webUI 访问 driver 的状态。同时 Driver 会与 yarn 集群中的 Executor 进行大量的通信，会造成客户机网卡流量的大量增加。</p>
-<p><strong>yarn-cluster 模式</strong></p>
-<p>Yarn-Cluster 主要用于生产环境中，因为 Driver 运行在 Yarn 集群中某一台 NodeManager 中，每次提交任务的 Driver 所在的机器都是随机的，不会产生某一台机器网卡流量激增的现象，缺点是任务提交后不能看到日志。只能通过 yarn 查看日志。</p>
-<p><img src="/images/spark-on-yarn-cluster.png" alt="spark-on-yarn-cluster"></p>
-<p>client 向 yarn 提交应用程序，包含 ApplicationMaster 程序、启动 ApplicationMaster 的命令、需要在 Executor 中运行的程序等。</p>
-<p>ApplicationMaster 程序启动 ApplicationMaster 的命令、需要在 Executor 中运行的程序等。</p>
-<p>ApplicationMaster 向 ResourceManager 注册，这样用户可以直接通过 ResourceManage 查看应用程序的运行状态。</p>
-<p>ApplicationMaster 申请到资源（也就是 Container）后，便与对应的 NodeManager 通信，启动 Task。</p>
-<p>Task 向 ApplicationMaster 汇报运行的状态和进度，以让 ApplicationMaster 随时掌握各个任务的运行状态，从而可以在任务失败时重新启动任务。</p>
-<p>应用程序运行完成后，ApplicationMaster 向 ResourceManager 申请注销并关闭自己。</p>
-<h3 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h3><p><a target="_blank" rel="noopener" href="https://www.infoq.cn/article/zk8eyph0wn5xuywazstj">spark原理与特点</a></p>
+          Spark模块Spark CoreSpark Core 是 Spark 的核心，其包含如下几个部分：
 
-          
+Spark基础配置
+SparkConf（配置信息）
+SparkContext（Spark上下文）
+SparkRPC（远程调用）
+ListenerBus（事件总线）
+MetricsSystem（度量
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2021/09/22/spark-design/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -716,99 +507,16 @@
       
         
           
-            <h3 id="spark简介"><a href="#spark简介" class="headerlink" title="spark简介"></a>spark简介</h3><p>在大数据计算领域，Spark已经成为了越来越流行、越来越受欢迎的计算平台之一。Spark的功能涵盖了大数据领域的离线批处理、SQL类处理、流式/实时计算、机器学习、图计算等各种不同类型的计算操作，应用范围与前景非常广泛。</p>
-<p>Spark是UC Berkeley AMPLab（美国加州大学伯克利分校的AMP实验室）开源的通用的分布式大数据计算引擎。它扩展了广泛使用的Map-Reduce计算模型。高效的支撑更多计算模式，包括交互式查询和流处理。spark的一个主要特点是能够在内存中进行计算，及时依赖磁盘进行复杂的运算，Spark依然比Map-Reduce更加高效。</p>
-<p>Spark的分析引擎处理数据的速度比其他替代品快10到100倍。它通过跨大型计算机集群分布处理工作来扩展，具有内置的并行性和容错性。它甚至包括在数据分析师和数据科学家中流行的编程语言的API，包括Scala、Java、Python和R。</p>
-<h3 id="Spark-vs-Map-Reduce"><a href="#Spark-vs-Map-Reduce" class="headerlink" title="Spark vs Map-Reduce"></a>Spark vs Map-Reduce</h3><ul>
-<li><p>性能：</p>
-<p>Apache Spark在随机存取存储器(RAM) 中处理数据，而Hadoop Map-Reduce在执行映射或归约操作后将数据持久化回磁盘。从理论上讲，Spark应 该胜过Hadoop Map-Reduce。</p>
-<p>尽管如此，Spark需要大量内存。 与标准数据库非常相似，Spark将 进程加载到内存中，并将其保留在内存中，直到出于缓存目的而另行通知为止。如果您在具有其他资源需求服务的Hadoop YARN.上运行Spark，或者如果数据太大而无法完全容纳到内存中，则Spark可能会遭受严重的性能下降。</p>
-<p>另一方面，Map-Reduce会 在完成一项工作后立即终止其进程，因此它可以轻松地与其他服务一起运行，但性能会有细微的差别。</p>
-<p>对于需要多次传递相同数据的迭代计算，Spark具有优势。 但是，当涉及到类似ETL的一遍工作时(例如，数据转换或数据集成)， 这正是Map-Reduce设计的目的。</p>
-</li>
-<li><p>容错性：</p>
-<p>与Map-Reduce一样，Spark对每 个任务和推测性执行都有重试。但是，Map-Reduce在这里有一点优势，因为它依赖于硬盘驱动器而不是RAM。如果MapReduce进程在执行过程中崩溃，则它可以从中断处继续执行，而Spark必须从头开始处理。</p>
-<p>Spark和Hadoop Map-Reduce都具有良好的容错能力，但是Hadoop Map-Reduce的容错性稍强。</p>
-</li>
-<li><p>易用性：</p>
-<p>Spark具有针对Java，Scala和Python的预构建API， 并且还包括针对SQL精通的Spark SQL (以前称为Shark) 。得益于Spark的简单构建块，编写用户定义的函数很容易。Spark甚至包括一种交互式模式，用于运行具有即时反馈的命令。</p>
-<p>Map-Reduce是用Java编写的，因此很难编程。Apache Pig使它更容易(尽管需要一 些时间来学习语法)，而Apache Hive为该板增加了SQL兼容性。一些Hadoop具也可以运行Map-Reduce作业，而无需进行任何编程。例如，Xplenty 是一种基于Hadoop的数据集成服务，并且不需要任何编程或部署。</p>
-<p>Spark支持很多操作：</p>
-<ul>
-<li>Transformation操作：<code>map, flatMap,filter,sample,groupByKey,reduceByKey,union,join,sort,partitionByKey</code></li>
-<li>Action操作：<code>collect,reduce,lookup,save等</code></li>
-<li><code>shuffle</code></li>
-<li><code>sql</code></li>
-</ul>
-</li>
-<li><p>安全性：</p>
-<p>在安全性方面，与MapReduce相比，Spark不那么先进。 实际上，Spark中的安全性默认情况下设置为关闭，这会使您容易受到攻击。</p>
-<p>RPC通道通过共享密钥支持Spark中的身份验证。Spark包含 事件日志记录功能，并且可以通过javax servlet过滤器保护Web∪l。另外，由于Spark可以在YARN上运行并使用HDFS，因此它还可以享受Kerberos身份验证，HDFS文件权限以及节点之间的加密。</p>
-<p>Hadoop MapReduce可以享受Hadoop的所有安全优势，并且可以与Hadoop安全项目(例如Knox Gateway和Apache Sentry)集成。旨在提高Hadoop安全性的Rhino项目仅在增加Sentry支持方面提到了Spark。否则，Spark开 发人员必须自己提高Spark安全性。</p>
-<p>与具有更多安全功能和项目的MapReduce相比，Spark安全性尚不完善。</p>
-</li>
-<li><p>数据处理：</p>
-<p>Spark不仅可以执行简单的数据处理，还可以处理图形，并且包括MLlib机器学习库。Spark还可以执行实时处理以及批处理。处理的方式也很多，可以使用RDD，也可以使用DataFrame,DataSet等高级API，或者使用SQL来处理。</p>
-<p>Hadoop MapReduce非常适合批处理。如果需要实时选项，则需要使用其他平台，例如Impala或Apache Storm，对于图形处理，可以使用Apache Graph。MapReduce过去曾使用Apache Mahout进行机器学习，但此后却被Spark取代。</p>
-</li>
-</ul>
-<p>凭借其内存中数据处理功能，Spark具有 出色的性能并且具有很高的成本效益。它与Hadoop的所有数据源和文件格式兼容，并且学习曲线更快，并且具有适用于多种编程语言的友好API。Spark甚 至包括图形处理和机器学习功能。</p>
-<p>Hadoop MapReduce是一个更成熟的平台，它是专门为批处理而构建的。对于无法容纳在内存中的超大数据，MapReduce 可能比Spark更具成本效益，并且可能更容易找到具有MapReduce经验的员工。此外，由于许多支持项目，工具和云服务，MapReduce生态系统目前更大。</p>
-<h3 id="Spark生态介绍"><a href="#Spark生态介绍" class="headerlink" title="Spark生态介绍"></a>Spark生态介绍</h3><ul>
-<li>支持多种资源调度的方式<ul>
-<li>Local（主要应用于开发模式）</li>
-<li>Standalone（主要用于测试模式）</li>
-<li>YARN</li>
-<li>K8s</li>
-<li>meSOS</li>
-</ul>
-</li>
-<li>支持多种数据格式<ul>
-<li>Json</li>
-<li>CSV</li>
-<li>TXT</li>
-<li>Parquet</li>
-<li>ORC</li>
-</ul>
-</li>
-<li>支持多种语言API是支持<ul>
-<li>Java</li>
-<li>Scala</li>
-<li>Python(PySpark)</li>
-<li>R(SparkR)</li>
-</ul>
-</li>
-<li>支持多种存储介质<ul>
-<li>HDFS</li>
-<li>HBase</li>
-<li>Es</li>
-<li>MySQL</li>
-<li>Neo4J</li>
-<li>Redis</li>
-<li>MongoDB</li>
-<li>Hive</li>
-<li>Cassandra</li>
-</ul>
-</li>
-<li>支持多种数据源<ul>
-<li>Kafka</li>
-<li>Flume</li>
-</ul>
-</li>
-<li>多个模块<ul>
-<li>Spark Core</li>
-<li>Spark Streaming</li>
-<li>Spark SQL</li>
-<li>Spark ML LIb</li>
-<li>Spark GraphX</li>
-<li>Spark R</li>
-</ul>
-</li>
-</ul>
-<h3 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h3><p><a target="_blank" rel="noopener" href="https://www.xplenty.com/blog/apache-spark-vs-hadoop-mapreduce/">spark-vs-hadoop-mapreduce</a></p>
-<p><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Apache_Spark">Spark-wiki</a></p>
-
-          
+          spark简介在大数据计算领域，Spark已经成为了越来越流行、越来越受欢迎的计算平台之一。Spark的功能涵盖了大数据领域的离线批处理、SQL类处理、流式/实时计算、机器学习、图计算等各种不同类型的计算操作，应用范围与前景非常广泛。
+Spark是UC Berkeley AMPLab（美国加州大学伯
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2021/09/21/spark-introduction/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -926,133 +634,16 @@
       
         
           
-            <h1 id="Singleton-Design-Pattern"><a href="#Singleton-Design-Pattern" class="headerlink" title="Singleton Design Pattern"></a>Singleton Design Pattern</h1><h2 id="什么是单例模式"><a href="#什么是单例模式" class="headerlink" title="什么是单例模式"></a>什么是单例模式</h2><p><strong>单例设计模式（Singleton Design Pattern）</strong>理解起来非常简单。一个类只允许创建一个对象（或者实例），那这个类就是一个单例类，这种设计模式就叫作单例设计模式，简称单例模式。</p>
-<h2 id="为什么要使用单例模式"><a href="#为什么要使用单例模式" class="headerlink" title="为什么要使用单例模式"></a>为什么要使用单例模式</h2><p>从业务概念上，有些数据在系统中只应该保存一份，就比较适合设计为单例模式。比如，系统的配置信息类。除此之外，我们还可以使用单例解决资源访问冲突的问题。</p>
-<h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a>场景</h3><ul>
-<li><p>处理资源访问冲突</p>
-</li>
-<li><p>全局唯一性</p>
-</li>
-<li><p>配置类</p>
-</li>
-<li><p>windows任务管理器</p>
-</li>
-<li><p>windows回收站</p>
-</li>
-<li><p>全局配置信息类</p>
-</li>
-<li><p>计数器</p>
-</li>
-<li><p>数据库连接池</p>
-</li>
-<li><p>servlet</p>
-</li>
-<li><p>spring bean</p>
-</li>
-<li><p>….</p>
-</li>
-</ul>
-<h2 id="如何实现单例模式"><a href="#如何实现单例模式" class="headerlink" title="如何实现单例模式"></a>如何实现单例模式</h2><h3 id="饿汉式"><a href="#饿汉式" class="headerlink" title="饿汉式"></a>饿汉式</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 基于饿汉式实现的单例模式</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> shao</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Hungry</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Hungry instance = <span class="keyword">new</span> Hungry();</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 提供无参构造</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="title">Hungry</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Hungry <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">		<span class="keyword">return</span> instance;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>优点<ul>
-<li>线程安全</li>
-<li>实现简单</li>
-<li>没有加锁，执行效率会提高</li>
-</ul>
-</li>
-<li>缺点<ul>
-<li>不支持lazy加载</li>
-<li>类加载时就初始化，浪费内存</li>
-</ul>
-</li>
-</ul>
-<h3 id="懒汉式"><a href="#懒汉式" class="headerlink" title="懒汉式"></a>懒汉式</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 懒汉式 线程安全</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> shawn</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LazyMan</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="title">LazyMan</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> LazyMan lazyMan;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> LazyMan <span class="title">getInstance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (lazyMan == <span class="keyword">null</span>) &#123;</span><br><span class="line">			lazyMan = <span class="keyword">new</span> LazyMan();</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> lazyMan;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>优点<ul>
-<li>线程安全</li>
-<li>支持lazy加载</li>
-<li>第一次调用才初始化，避免内存浪费。</li>
-</ul>
-</li>
-<li>缺点<ul>
-<li>必须加锁 synchronized 才能保证单例，但加锁会影响效率。</li>
-</ul>
-</li>
-</ul>
-<p>如果这个单例类偶尔会被用到，那这种实现方式还可以接受。但是，如果频繁地用到，那频繁加锁、释放锁及并发度低等问题，会导致性能瓶颈，这种实现方式就不可取了。</p>
-<h3 id="双检锁-双重校验锁（DCL，即-double-checked-locking）"><a href="#双检锁-双重校验锁（DCL，即-double-checked-locking）" class="headerlink" title="双检锁/双重校验锁（DCL，即 double-checked locking）"></a>双检锁/双重校验锁（DCL，即 double-checked locking）</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * double-checked locking</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span>  shawn</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DoubleCheckedLocking</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> DoubleCheckedLocking singleton;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="title">DoubleCheckedLocking</span> <span class="params">()</span></span>&#123;&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> DoubleCheckedLocking <span class="title">getSingleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (singleton == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">synchronized</span> (DoubleCheckedLocking.class) &#123;</span><br><span class="line">				<span class="keyword">if</span> (singleton == <span class="keyword">null</span>) &#123;</span><br><span class="line">					singleton = <span class="keyword">new</span> DoubleCheckedLocking();</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> singleton;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>解决了饿汉式和懒汉式的缺点</p>
-<p><code>volatile</code>解决了指令重排的问题</p>
-<pre>
-singleton = new DoubleCheckedLocking();
-1. 分配内存
-2. 执行构造方法
-3. 指向地址    
-</pre>
-
-
-<p>但是实际上，只有很低版本的 Java 才会有这个问题。我们现在用的高版本的 Java 已经在 JDK 内部实现中解决了这个问题（解决的方法很简单，只要把对象 new 操作和初始化操作设计为原子操作，就自然能禁止重排序）</p>
-<h3 id="静态内部类"><a href="#静态内部类" class="headerlink" title="静态内部类"></a>静态内部类</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Static inner class</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> com.shawn</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StaticInnerClass</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="title">StaticInnerClass</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> StaticInnerClass <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">		<span class="keyword">return</span> InnerClass.INTANCE;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">InnerClass</span></span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> StaticInnerClass INTANCE = <span class="keyword">new</span> StaticInnerClass();</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>InnerClass</code>是一个静态内部类，当外部类 <code>StaticInnerClass</code>被加载的时候，并不会创建 <code>InnerClass</code>实例对象。只有当调用 getInstance() 方法时，<code>InnerClass</code>才会被加载，这个时候才会创建 instance。insance 的唯一性、创建过程的线程安全性，都由 JVM 来保证。所以，这种实现方法既保证了线程安全，又能做到延迟加载。</p>
-<h3 id="枚举"><a href="#枚举" class="headerlink" title="枚举"></a>枚举</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * enum singleton</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> shawn</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">enum</span>  <span class="title">EnumSingleton</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 单例模式</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	INSTANCE;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> EnumSingleton <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">		<span class="keyword">return</span> INSTANCE;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="单例模式存在哪些问题"><a href="#单例模式存在哪些问题" class="headerlink" title="单例模式存在哪些问题"></a>单例模式存在哪些问题</h2><ul>
-<li><p>单例对 OOP 特性的支持不友好</p>
-<p>一旦你选择将某个类设计成到单例类，也就意味着放弃了继承和多态这两个强有力的面向对象特性，也就相当于损失了可以应对未来需求变化的扩展性</p>
-</li>
-<li><p>单例会隐藏类之间的依赖关系</p>
-<p>单例类不需要显示创建、不需要依赖参数传递，在函数中直接调用就可以了。如果代码比较复杂，这种调用关系就会非常隐蔽。在阅读代码的时候，我们就需要仔细查看每个函数的代码实现，才能知道这个类到底依赖了哪些单例类。</p>
-</li>
-<li><p>单例对代码的扩展性不友好</p>
-<p>单例类只能有一个对象实例。如果未来某一天，我们需要在代码中创建两个实例或多个实例，那就要对代码有比较大的改动。</p>
-</li>
-<li><p>单例对代码的可测试性不友好</p>
-<p>单例模式的使用会影响到代码的可测试性。如果单例类依赖比较重的外部资源，比如 DB，我们在写单元测试的时候，希望能通过 mock 的方式将它替换掉。而单例类这种硬编码式的使用方式，导致无法实现 mock 替换。</p>
-</li>
-<li><p>单例不支持有参数的构造函数</p>
-<p>单例不支持有参数的构造函数，比如我们创建一个连接池的单例对象，我们没法通过参数来指定连接池的大小。针对这个问题，我们来看下都有哪些解决方案。</p>
-<p>第一种解决思路是：创建完实例之后，再调用 init() 函数传递参数。需要注意的是，我们在使用这个单例类的时候，要先调用 init() 方法，然后才能调用 getInstance() 方法，否则代码会抛出异常。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Singleton instance = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramA;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramB;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">(<span class="keyword">int</span> paramA, <span class="keyword">int</span> paramB)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.paramA = paramA;</span><br><span class="line">    <span class="keyword">this</span>.paramB = paramB;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (instance == <span class="keyword">null</span>) &#123;</span><br><span class="line">       <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">&quot;Run init() first.&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> instance;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">static</span> Singleton <span class="title">init</span><span class="params">(<span class="keyword">int</span> paramA, <span class="keyword">int</span> paramB)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (instance != <span class="keyword">null</span>)&#123;</span><br><span class="line">       <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">&quot;Singleton has been created!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    instance = <span class="keyword">new</span> Singleton(paramA, paramB);</span><br><span class="line">    <span class="keyword">return</span> instance;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Singleton.init(<span class="number">10</span>, <span class="number">50</span>); <span class="comment">// 先init，再使用</span></span><br><span class="line">Singleton singleton = Singleton.getInstance();</span><br></pre></td></tr></table></figure>
-
-<p>第二种解决思路是：将参数放到 getIntance() 方法中。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Singleton instance = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramA;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramB;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">(<span class="keyword">int</span> paramA, <span class="keyword">int</span> paramB)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.paramA = paramA;</span><br><span class="line">    <span class="keyword">this</span>.paramB = paramB;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">(<span class="keyword">int</span> paramA, <span class="keyword">int</span> paramB)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (instance == <span class="keyword">null</span>) &#123;</span><br><span class="line">      instance = <span class="keyword">new</span> Singleton(paramA, paramB);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> instance;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Singleton singleton = Singleton.getInstance(<span class="number">10</span>, <span class="number">50</span>);</span><br></pre></td></tr></table></figure>
-
-<p>第三种解决思路是：将参数放到另外一个全局变量中。具体的代码实现如下。Config 是一个存储了 paramA 和 paramB 值的全局变量。里面的值既可以像下面的代码那样通过静态常量来定义，也可以从配置文件中加载得到。实际上，这种方式是最值得推荐的</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Config</span> </span>&#123;</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> PARAM_A = <span class="number">123</span>;</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> fianl <span class="keyword">int</span> PARAM_B = <span class="number">245</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> Singleton instance = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramA;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramB;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.paramA = Config.PARAM_A;</span><br><span class="line">    <span class="keyword">this</span>.paramB = Config.PARAM_B;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (instance == <span class="keyword">null</span>) &#123;</span><br><span class="line">      instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> instance;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
-</ul>
-<h2 id="如何理解单例的唯一性"><a href="#如何理解单例的唯一性" class="headerlink" title="如何理解单例的唯一性"></a>如何理解单例的唯一性</h2><p>“一个类只允许创建唯一一个对象”。那对象的唯一性的作用范围是什么呢？是指线程内只允许创建一个对象，还是指进程内只允许创建一个对象？答案是后者，也就是说，单例模式创建的对象是进程唯一的。</p>
-<h2 id="如何实现线程中的唯一性"><a href="#如何实现线程中的唯一性" class="headerlink" title="如何实现线程中的唯一性"></a>如何实现线程中的唯一性</h2><p>HashMap</p>
-<p>ThreadLocal</p>
-<h2 id="如何实现集群下的单例"><a href="#如何实现集群下的单例" class="headerlink" title="如何实现集群下的单例"></a>如何实现集群下的单例</h2><p>我们需要把这个单例对象序列化并存储到外部共享存储区（比如文件）。进程在使用这个单例对象的时候，需要先从外部共享存储区中将它读取到内存，并反序列化成对象，然后再使用，使用完成之后还需要再存储回外部共享存储区。为了保证任何时刻，在进程间都只有一份对象存在，一个进程在获取到对象之后，需要对对象加锁，避免其他进程再将其获取。在进程使用完这个对象之后，还需要显式地将对象从内存中删除，并且释放对对象的加锁。</p>
-<h2 id="如何实现多例模式"><a href="#如何实现多例模式" class="headerlink" title="如何实现多例模式"></a>如何实现多例模式</h2><p>“单例”指的是，一个类只能创建一个对象。对应地，“多例”指的就是，一个类可以创建多个对象，但是个数是有限制的，比如只能创建 3 个对象。如果用代码来简单示例一下的话，就是下面这个样子：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BackendServer</span> </span>&#123;  <span class="keyword">private</span> <span class="keyword">long</span> serverNo;  <span class="keyword">private</span> String serverAddress;  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> SERVER_COUNT = <span class="number">3</span>;  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Map&lt;Long, BackendServer&gt; serverInstances = <span class="keyword">new</span> HashMap&lt;&gt;();  <span class="keyword">static</span> &#123;    serverInstances.put(<span class="number">1L</span>, <span class="keyword">new</span> BackendServer(<span class="number">1L</span>, <span class="string">&quot;192.134.22.138:8080&quot;</span>));    serverInstances.put(<span class="number">2L</span>, <span class="keyword">new</span> BackendServer(<span class="number">2L</span>, <span class="string">&quot;192.134.22.139:8080&quot;</span>));    serverInstances.put(<span class="number">3L</span>, <span class="keyword">new</span> BackendServer(<span class="number">3L</span>, <span class="string">&quot;192.134.22.140:8080&quot;</span>));  &#125;  <span class="function"><span class="keyword">private</span> <span class="title">BackendServer</span><span class="params">(<span class="keyword">long</span> serverNo, String serverAddress)</span> </span>&#123;    <span class="keyword">this</span>.serverNo = serverNo;    <span class="keyword">this</span>.serverAddress = serverAddress;  &#125;  <span class="function"><span class="keyword">public</span> BackendServer <span class="title">getInstance</span><span class="params">(<span class="keyword">long</span> serverNo)</span> </span>&#123;    <span class="keyword">return</span> serverInstances.get(serverNo);  &#125;  <span class="function"><span class="keyword">public</span> BackendServer <span class="title">getRandomInstance</span><span class="params">()</span> </span>&#123;    Random r = <span class="keyword">new</span> Random();    <span class="keyword">int</span> no = r.nextInt(SERVER_COUNT)+<span class="number">1</span>;    <span class="keyword">return</span> serverInstances.get(no);  &#125;&#125;</span><br></pre></td></tr></table></figure>
-
-<p>实际上，对于多例模式，还有一种理解方式：同一类型的只能创建一个对象，不同类型的可以创建多个对象。这里的“类型”如何理解呢？</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Logger</span> </span>&#123;  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> ConcurrentHashMap&lt;String, Logger&gt; instances          = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;();  <span class="function"><span class="keyword">private</span> <span class="title">Logger</span><span class="params">()</span> </span>&#123;&#125;  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Logger <span class="title">getInstance</span><span class="params">(String loggerName)</span> </span>&#123;    instances.putIfAbsent(loggerName, <span class="keyword">new</span> Logger());    <span class="keyword">return</span> instances.get(loggerName);  &#125;  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">log</span><span class="params">()</span> </span>&#123;    <span class="comment">//...  &#125;&#125;//l1==l2, l1!=l3Logger l1 = Logger.getInstance(&quot;User.class&quot;);Logger l2 = Logger.getInstance(&quot;User.class&quot;);Logger l3 = Logger.getInstance(&quot;Order.class&quot;);</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="如何利用反射来破坏单例"><a href="#如何利用反射来破坏单例" class="headerlink" title="如何利用反射来破坏单例"></a>如何利用反射来破坏单例</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;		<span class="keyword">try</span> &#123;			LazyMan lazyMan1 = LazyMan.getInstance();			Constructor&lt;LazyMan&gt; declaredConstructor = LazyMan.class.getDeclaredConstructor(<span class="keyword">null</span>);			declaredConstructor.setAccessible(<span class="keyword">true</span>);			LazyMan lazyMan2 = declaredConstructor.newInstance();			System.out.println(lazyMan1.hashCode());			System.out.println(lazyMan2.hashCode());			System.out.println(lazyMan1 == lazyMan2);		&#125; <span class="keyword">catch</span> (Exception e) &#123;			e.printStackTrace();		&#125;	&#125;</span><br></pre></td></tr></table></figure>
-
-<p>解决方案：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LazyMan</span> </span>&#123;    <span class="function"><span class="keyword">private</span> <span class="title">LazyMan</span><span class="params">()</span> </span>&#123;        <span class="keyword">synchronized</span> (LazyMan.class) &#123;            <span class="keyword">if</span> (lazyMan != <span class="keyword">null</span>) &#123;                <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">&quot;不要试图用反射破坏单例模式&quot;</span>);            &#125;        &#125;    &#125;    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> LazyMan lazyMan;    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> LazyMan <span class="title">getInstance</span><span class="params">()</span> </span>&#123;        <span class="keyword">if</span> (lazyMan == <span class="keyword">null</span>) &#123;            <span class="keyword">synchronized</span> (LazyMan.class) &#123;                <span class="keyword">if</span> (lazyMan == <span class="keyword">null</span>) &#123;                    lazyMan = <span class="keyword">new</span> LazyMan();                &#125;            &#125;        &#125;        <span class="keyword">return</span> lazyMan;    &#125;&#125;</span><br></pre></td></tr></table></figure>
-
-<p>但是这种写法还是有问题：</p>
-<p>上面我们是先正常的调用了getInstance方法，创建了LazyMan对象，所以第二次用反射创建对象，私有构造函数里面的判断起作用了，反射破坏单例模式失败。但是如果破坏者干脆不先调用getInstance方法，一上来就直接用反射创建对象，我们的判断就不生效了：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;        <span class="keyword">try</span> &#123;            Constructor&lt;LazyMan&gt; declaredConstructor = LazyMan.class.getDeclaredConstructor(<span class="keyword">null</span>);            declaredConstructor.setAccessible(<span class="keyword">true</span>);            LazyMan lazyMan1 = declaredConstructor.newInstance();            LazyMan lazyMan2 = declaredConstructor.newInstance();            System.out.println(lazyMan1.hashCode());            System.out.println(lazyMan2.hashCode());        &#125; <span class="keyword">catch</span> (Exception e) &#123;            e.printStackTrace();        &#125;&#125;</span><br></pre></td></tr></table></figure>
-
-<p>那么如何防止这种反射破坏呢？</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LazyMan</span> </span>&#123;    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">boolean</span> flag = <span class="keyword">false</span>;    <span class="function"><span class="keyword">private</span> <span class="title">LazyMan</span><span class="params">()</span> </span>&#123;        <span class="keyword">synchronized</span> (LazyMan.class) &#123;            <span class="keyword">if</span> (flag == <span class="keyword">false</span>) &#123;                flag = <span class="keyword">true</span>;            &#125; <span class="keyword">else</span> &#123;                <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">&quot;不要试图用反射破坏单例模式&quot;</span>);            &#125;        &#125;    &#125;    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> LazyMan lazyMan;    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> LazyMan <span class="title">getInstance</span><span class="params">()</span> </span>&#123;        <span class="keyword">if</span> (lazyMan == <span class="keyword">null</span>) &#123;            <span class="keyword">synchronized</span> (LazyMan.class) &#123;                <span class="keyword">if</span> (lazyMan == <span class="keyword">null</span>) &#123;                    lazyMan = <span class="keyword">new</span> LazyMan();                &#125;            &#125;        &#125;        <span class="keyword">return</span> lazyMan;    &#125;&#125;</span><br></pre></td></tr></table></figure>
-
-<p>看起来很美好，但是还是不能完全防止反射破坏单例模式，因为可以利用反射修改flag的值。</p>
-<p>枚举可以彻底解决：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@CallerSensitive</span>    <span class="function"><span class="keyword">public</span> T <span class="title">newInstance</span><span class="params">(Object ... initargs)</span>        <span class="keyword">throws</span> InstantiationException, IllegalAccessException,               IllegalArgumentException, InvocationTargetException    </span>&#123;        <span class="keyword">if</span> (!override) &#123;            <span class="keyword">if</span> (!Reflection.quickCheckMemberAccess(clazz, modifiers)) &#123;                Class&lt;?&gt; caller = Reflection.getCallerClass();                checkAccess(caller, clazz, <span class="keyword">null</span>, modifiers);            &#125;        &#125;                   <span class="comment">// 这句话，如果对象是枚举类型，抛异常        if ((clazz.getModifiers() &amp; Modifier.ENUM) != 0)            throw new IllegalArgumentException(&quot;Cannot reflectively create enum objects&quot;);        ConstructorAccessor ca = constructorAccessor;   // read volatile        if (ca == null) &#123;            ca = acquireConstructorAccessor();        &#125;        @SuppressWarnings(&quot;unchecked&quot;)        T inst = (T) ca.newInstance(initargs);        return inst;    &#125;</span></span><br></pre></td></tr></table></figure>
-
-          
+          Singleton Design Pattern什么是单例模式单例设计模式（Singleton Design Pattern）理解起来非常简单。一个类只允许创建一个对象（或者实例），那这个类就是一个单例类，这种设计模式就叫作单例设计模式，简称单例模式。
+为什么要使用单例模式从业务概念上，有些数据在系
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2021/09/21/singleton-design-pattern/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
