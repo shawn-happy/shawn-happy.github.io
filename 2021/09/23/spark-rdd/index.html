@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="big-data,spark,rdd," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="RDD什么是RDD RDD（Resilient Distributed Dataset）叫做弹性分布式数据集，是Spark中最基本的数据抽象，它代表一个不可变、可分区、里面的元素可并行计算的集合。 RDD支持丰富的操作算子。 transformation APIs: RDD转换，构建RDD的血缘关系 Action APIs:触发RDD的计算并将获取计算结果   RDD基于血缘关系(Lineage)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spark rdd">
+<meta property="og:url" content="http://example.com/2021/09/23/spark-rdd/index.html">
+<meta property="og:site_name" content="Shawn Happy Home">
+<meta property="og:description" content="RDD什么是RDD RDD（Resilient Distributed Dataset）叫做弹性分布式数据集，是Spark中最基本的数据抽象，它代表一个不可变、可分区、里面的元素可并行计算的集合。 RDD支持丰富的操作算子。 transformation APIs: RDD转换，构建RDD的血缘关系 Action APIs:触发RDD的计算并将获取计算结果   RDD基于血缘关系(Lineage)">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/spark-rdd-dependency.png">
+<meta property="og:image" content="http://example.com/images/spark-rdd-dependency-stage.png">
+<meta property="article:published_time" content="2021-09-22T16:58:17.000Z">
+<meta property="article:modified_time" content="2021-09-25T16:57:55.607Z">
+<meta property="article:author" content="Shawn">
+<meta property="article:tag" content="big-data">
+<meta property="article:tag" content="spark">
+<meta property="article:tag" content="rdd">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/spark-rdd-dependency.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2021/09/23/spark-rdd/"/>
+
+
+
+
+
+  <title>spark rdd | Shawn Happy Home</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Shawn Happy Home</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/23/spark-rdd/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Shawn Happy Home">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">spark rdd</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-09-23T00:58:17+08:00">
+                2021-09-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/big-data/" itemprop="url" rel="index">
+                    <span itemprop="name">big-data</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="RDD"><a href="#RDD" class="headerlink" title="RDD"></a>RDD</h3><h4 id="什么是RDD"><a href="#什么是RDD" class="headerlink" title="什么是RDD"></a>什么是RDD</h4><ul>
+<li>RDD（Resilient Distributed Dataset）叫做<strong>弹性分布式数据集</strong>，<strong>是Spark中最基本的数据抽象</strong>，它代表一个不可变、可分区、里面的元素可并行计算的集合。</li>
+<li>RDD支持丰富的操作算子。<ul>
+<li>transformation APIs: RDD转换，构建RDD的血缘关系</li>
+<li>Action APIs:触发RDD的计算并将获取计算结果</li>
+</ul>
+</li>
+<li>RDD基于血缘关系(Lineage)实现故障重恢复</li>
+<li>RDD数据可缓存到内存中并在多个操作之间共享</li>
+</ul>
+<h4 id="RDD的特点"><a href="#RDD的特点" class="headerlink" title="RDD的特点"></a>RDD的特点</h4><ul>
+<li>只读：不能修改，只能通过转换操作生成新的 RDD。</li>
+<li>分布式：可以分布在多台机器上进行并行处理。</li>
+<li>弹性：计算过程中内存不够时它会和磁盘进行数据交换。</li>
+<li>基于内存：可以全部或部分缓存在内存中，在多次计算间重用。</li>
+</ul>
+<h4 id="RDD的属性"><a href="#RDD的属性" class="headerlink" title="RDD的属性"></a>RDD的属性</h4><ul>
+<li>A list of partitions。一组分片，数据集的基本组成单位。对于RDD来说，每个分片都会被一个计算任务处理，并决定并行计算的粒度。用户可以在创建RDD时指定RDD的分片个数，如果没有指定，那么就会采用默认值。默认值就是程序所分配到的CPU Core的数目。</li>
+<li>A function for computing each split：一个计算每个分区的函数。Spark中RDD的计算是以分片为单位的，每个RDD都会实现compute函数以达到这个目的。compute函数会对迭代器进行复合，不需要保存每次计算的结果。</li>
+<li>A list of dependencies on other RDDs：RDD之间的依赖关系。RDD的每次转换都会生成一个新的RDD，所以RDD之间就会形成类似于流水线一样的前后依赖关系。在部分分区数据丢失时，Spark可以通过这个依赖关系重新计算丢失的分区数据，而不是对RDD的所有分区进行重新计算。</li>
+<li>Optionally, a Partitioner for key-value RDDs (e.g. to say that the RDD is hash-partitioned)：一个Partitioner，即RDD的分片函数。当前Spark中实现了两种类型的分片函数，一个是基于哈希的HashPartitioner，另外一个是基于范围的RangePartitioner。只有对于于key-value的RDD，才会有Partitioner，非key-value的RDD的Parititioner的值是None。Partitioner函数不但决定了RDD本身的分片数量，也决定了parent RDD Shuffle输出时的分片数量。</li>
+<li>Optionally, a list of preferred locations to compute each split on (e.g. block locations for an HDFS file)：一个列表，存储存取每个Partition的优先位置（preferred location）。对于一个HDFS文件来说，这个列表保存的就是每个Partition所在的块的位置。按照“移动数据不如移动计算”的理念，Spark在进行任务调度的时候，会尽可能地将计算任务分配到其所要处理数据块的存储位置。</li>
+</ul>
+<h4 id="RDD-Partition"><a href="#RDD-Partition" class="headerlink" title="RDD Partition"></a>RDD Partition</h4><p>RDD数据集逻辑上被划分为多个Partition，RDD计算任务在物理上被分配到多个Task。<strong>Partition的数量决定了task的数量，影响着程序的并行度。</strong>Partition是伴生的，也就是说每一种RDD都有其对应的Partition实现。</p>
+<p>Partition的子类有：</p>
+<ul>
+<li>JdbcPartition</li>
+<li>HadoopPartition</li>
+</ul>
+<h4 id="RDD-partitioner"><a href="#RDD-partitioner" class="headerlink" title="RDD partitioner"></a>RDD partitioner</h4><p>决定数据分到哪个Partition，对于非key-value类型的RDD，Partitioner为None， 对应key-value类型的RDD，Partitioner默认为HashPartitioner。在进行shuffle操作时，如reduceByKey, sortByKey，Partitioner决定了父RDD shuffle的输出时对应的分区中的数据是如何进行map的；</p>
+<p>前2个函数是所有RDD必须的，后三个可选，所有的RDD均继承了该接口。</p>
+<p>Partitioner的子类有：</p>
+<ul>
+<li><p>HashPartitioner</p>
+</li>
+<li><p>RangePartitioner</p>
+</li>
+<li><p>自定义</p>
+</li>
+</ul>
+<h4 id="RDD-Dependency"><a href="#RDD-Dependency" class="headerlink" title="RDD Dependency"></a>RDD Dependency</h4><p>由于RDD是粗粒度的操作数据集，每个Transformation操作都会生成一个新的RDD，所以RDD之间就会形成类似流水线的前后依赖关系；RDD和它依赖的父RDD（s）的关系有两种不同的类型，即窄依赖（narrow dependency）和宽依赖（wide dependency）。</p>
+<p><strong>窄依赖：</strong>是指每个父RDD的一个Partition最多被子RDD的一个Partition所使用，例如map、filter、union等操作都会产生窄依赖；（独生子女）</p>
+<p><strong>宽依赖：</strong>是指一个父RDD的Partition会被多个子RDD的Partition所使用，例如groupByKey、reduceByKey、sortByKey等操作都会产生宽依赖；（超生）</p>
+<p><img src="/images/spark-rdd-dependency.png" alt="spark-rdd-dependency.png"></p>
+<p>（1）图中左半部分join：如果两个RDD在进行join操作时，一个RDD的partition仅仅和另一个RDD中已知个数的Partition进行join，那么这种类型的join操作就是窄依赖，例如图1中左半部分的join操作(join with inputs co-partitioned)；</p>
+<p>（2）图中右半部分join：其它情况的join操作就是宽依赖,例如图1中右半部分的join操作(join with inputs not co-partitioned)，由于是需要父RDD的所有partition进行join的转换，这就涉及到了shuffle，因此这种类型的join操作也是宽依赖。</p>
+<p>在这里我们是从父RDD的partition被使用的个数来定义窄依赖和宽依赖，因此可以用一句话概括下：如果父RDD的一个Partition被子RDD的一个Partition所使用就是窄依赖，否则的话就是宽依赖。因为是确定的partition数量的依赖关系，所以RDD之间的依赖关系就是窄依赖；由此我们可以得出一个推论：即窄依赖不仅包含一对一的窄依赖，还包含一对固定个数的窄依赖。</p>
+<p>一对固定个数的窄依赖的理解：即子RDD的partition对父RDD依赖的Partition的数量不会随着RDD数据规模的改变而改变；换句话说，无论是有100T的数据量还是1P的数据量，在窄依赖中，子RDD所依赖的父RDD的partition的个数是确定的，而宽依赖是shuffle级别的，数据量越大，那么子RDD所依赖的父RDD的个数就越多，从而子RDD所依赖的父RDD的partition的个数也会变得越来越多。</p>
+<p><img src="/images/spark-rdd-dependency-stage.png" alt="spark-rdd-dependency-stage.png"></p>
+<p>在spark中，会根据RDD之间的依赖关系将DAG图（有向无环图）划分为不同的阶段，对于窄依赖，由于partition依赖关系的确定性，partition的转换处理就可以在同一个线程里完成，窄依赖就被spark划分到同一个stage中，而对于宽依赖，只能等父RDD shuffle处理完成后，下一个stage才能开始接下来的计算。</p>
+<p><strong>因此spark划分stage的整体思路是</strong>：从后往前推，遇到宽依赖就断开，划分为一个stage；遇到窄依赖就将这个RDD加入该stage中。因此在图2中RDD C,RDD D,RDD E,RDDF被构建在一个stage中,RDD A被构建在一个单独的Stage中,而RDD B和RDD G又被构建在同一个stage中。</p>
+<p>在spark中，Task的类型分为2种：<strong>ShuffleMapTask</strong>和<strong>ResultTask</strong>；</p>
+<p>简单来说，DAG的最后一个阶段会为每个结果的partition生成一个ResultTask，即每个Stage里面的Task的数量是由该Stage中最后一个RDD的Partition的数量所决定的！而其余所有阶段都会生成ShuffleMapTask；之所以称之为ShuffleMapTask是因为它需要将自己的计算结果通过shuffle到下一个stage中；也就是说上图中的stage1和stage2相当于mapreduce中的Mapper,而ResultTask所代表的stage3就相当于mapreduce中的reducer。</p>
+<h4 id="RDD-持久化"><a href="#RDD-持久化" class="headerlink" title="RDD 持久化"></a>RDD 持久化</h4><p>Spark非常重要的一个功能特性就是可以将RDD持久化在内存中。当对RDD执行持久化操作时，每个节点都会将自己操作的RDD的<code>partition</code>持久化到内存中，并且在之后对该RDD的反复使用中，直接使用内存缓存的<code>partition</code>。这样的话，对于针对一个RDD反复执行多个操作的场景，就只要对RDD计算一次即可，后面直接使用该RDD，而不需要反复计算多次该RDD。</p>
+<p>巧妙使用RDD持久化，甚至在某些场景下，可以将spark应用程序的性能提升10倍。对于迭代式算法和快速交互式应用来说，RDD持久化，是非常重要的。</p>
+<p>要持久化一个RDD，只要调用其<code>cache()</code>或者<code>persist()</code>方法即可。在该RDD第一次被计算出来时，就会直接缓存在每个节点中。而且Spark的持久化机制还是自动容错的，如果持久化的RDD的任何<code>partition</code>丢失了，那么Spark会自动通过其源RDD，使用<code>transformation</code>操作重新计算该<code>partition</code>。</p>
+<p><code>cache()</code>和<code>persist()</code>的区别在于，<code>cache()</code>是<code>persist()</code>的一种简化方式，<code>cache()</code>的底层就是调用的<code>persist()</code>的无参版本，同时就是调用<code>persist(MEMORY_ONLY)</code>，将数据持久化到内存中。如果需要从内存中清楚缓存，那么可以使用<code>unpersist()</code>方法。</p>
+<p>Spark自己也会在<code>shuffle</code>操作时，进行数据的持久化，比如写入磁盘，主要是为了在节点失败时，避免需要重新计算整个过程。</p>
+<p>持久化级别：</p>
+<table>
+<thead>
+<tr>
+<th>Storage Level</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MEMORY_ONLY</td>
+<td>将RDD作为非序列化的Java对象存储在jvm中。如果RDD不适合存在内存中，一些分区将不会被缓存，从而在每次需要这些分区时都需重新计算它们。这是系统默认的存储级别。</td>
+</tr>
+<tr>
+<td>MEMORY_AND_DISK</td>
+<td>将RDD作为非序列化的Java对象存储在jvm中。如果RDD不适合存在内存中，将这些不适合存在内存中的分区存储在磁盘中，每次需要时读出它们。</td>
+</tr>
+<tr>
+<td>MEMORY_ONLY_SER</td>
+<td>将RDD作为序列化的Java对象存储（每个分区一个byte数组）。这种方式比非序列化方式更节省空间，特别是用到快速的序列化工具时，但是会更耗费cpu资源—密集的读操作。</td>
+</tr>
+<tr>
+<td>MEMORY_AND_DISK_SER</td>
+<td>和MEMORY_ONLY_SER类似，但不是在每次需要时重复计算这些不适合存储到内存中的分区，而是将这些分区存储到磁盘中。</td>
+</tr>
+<tr>
+<td>DISK_ONLY</td>
+<td>仅仅将RDD分区存储到磁盘中</td>
+</tr>
+<tr>
+<td>MEMORY_ONLY_2, MEMORY_AND_DISK_2, etc.</td>
+<td>和上面的存储级别类似，但是复制每个分区到集群的两个节点上面</td>
+</tr>
+<tr>
+<td>OFF_HEAP (experimental)</td>
+<td>以序列化的格式存储RDD到<a target="_blank" rel="noopener" href="http://tachyon-project.org/">Tachyon</a>中。相对于MEMORY_ONLY_SER，OFF_HEAP减少了垃圾回收的花费，允许更小的执行者共享内存池。这使其在拥有大量内存的环境下或者多并发应用程序的环境中具有更强的吸引力。</td>
+</tr>
+</tbody></table>
+<p>NOTE:在python中，存储的对象都是通过Pickle库序列化了的，所以是否选择序列化等级并不重要。</p>
+<p>Spark也会自动持久化一些shuffle操作（如<code>reduceByKey</code>）中的中间数据，即使用户没有调用<code>persist</code>方法。这样的好处是避免了在shuffle出错情况下，需要重复计算整个输入。如果用户计划重用 计算过程中产生的RDD，我们仍然推荐用户调用<code>persist</code>方法。</p>
+<p>Spark的多个存储级别意味着在内存利用率和cpu利用效率间的不同权衡。我们推荐通过下面的过程选择一个合适的存储级别：</p>
+<ul>
+<li>如果你的RDD适合默认的存储级别（MEMORY_ONLY），就选择默认的存储级别。因为这是cpu利用率最高的选项，会使RDD上的操作尽可能的快。</li>
+<li>如果不适合用默认的级别，选择MEMORY_ONLY_SER。选择一个更快的序列化库提高对象的空间使用率，但是仍能够相当快的访问。</li>
+<li>除非函数计算RDD的花费较大或者它们需要过滤大量的数据，不要将RDD存储到磁盘上，否则，重复计算一个分区就会和重磁盘上读取数据一样慢。</li>
+<li>如果你希望更快的错误恢复，可以利用重复(replicated)存储级别。所有的存储级别都可以通过重复计算丢失的数据来支持完整的容错，但是重复的数据能够使你在RDD上继续运行任务，而不需要重复计算丢失的数据。</li>
+<li>在拥有大量内存的环境中或者多应用程序的环境中，OFF_HEAP具有如下优势：<ul>
+<li>它运行多个执行者共享Tachyon中相同的内存池</li>
+<li>它显著地减少垃圾回收的花费</li>
+<li>如果单个的执行者崩溃，缓存的数据不会丢失</li>
+</ul>
+</li>
+</ul>
+<h4 id="RDD-WordCount-Code"><a href="#RDD-WordCount-Code" class="headerlink" title="RDD WordCount Code"></a>RDD WordCount Code</h4><ol>
+<li><p>in scala</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> conf = <span class="keyword">new</span> <span class="type">SparkConf</span>().setAppName(<span class="string">&quot;spark-scala-learning&quot;</span>).setMaster(<span class="string">&quot;local&quot;</span>)</span><br><span class="line"><span class="keyword">val</span> context = <span class="keyword">new</span> <span class="type">SparkContext</span>(conf)</span><br><span class="line"><span class="keyword">val</span> path = <span class="string">&quot;examples/input/wordcount&quot;</span></span><br><span class="line">context.textFile(path).flatMap(_.split(<span class="string">&quot; &quot;</span>))</span><br><span class="line">  .map((_, <span class="number">1</span>))</span><br><span class="line">  .reduceByKey(_ + _).collect().foreach(println)</span><br></pre></td></tr></table></figure></li>
+<li><p>in python</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(spark_context.parallelize(data)</span><br><span class="line">      .flatMap(<span class="keyword">lambda</span> line: line.split(<span class="string">&quot; &quot;</span>))</span><br><span class="line">      .<span class="built_in">map</span>(<span class="keyword">lambda</span> word: (word, <span class="number">1</span>))</span><br><span class="line">      .reduceByKey(<span class="keyword">lambda</span> a, b: a + b)</span><br><span class="line">      .collect())</span><br></pre></td></tr></table></figure></li>
+<li><p>in java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">String path = <span class="string">&quot;examples/input/wordcount&quot;</span>;</span><br><span class="line">List&lt;Tuple2&gt; results =</span><br><span class="line">    action(</span><br><span class="line">        sparkContext -&gt;</span><br><span class="line">            sparkContext</span><br><span class="line">                .textFile(path, sparkContext.defaultMinPartitions())</span><br><span class="line">                .flatMap(word -&gt; Arrays.asList(word.split(<span class="string">&quot; &quot;</span>)).iterator())</span><br><span class="line">                .mapToPair(word -&gt; <span class="keyword">new</span> Tuple2&lt;&gt;(word, <span class="number">1</span>))</span><br><span class="line">                .reduceByKey(Integer::sum)</span><br><span class="line">                .collect());</span><br><span class="line">results.forEach(System.out::println);</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h3><p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/qingyunzong/p/8899715.html#_label3_0">https://www.cnblogs.com/qingyunzong/p/8899715.html#_label3_0</a></p>
+<p><a target="_blank" rel="noopener" href="https://doc.yonyoucloud.com/doc/spark-programming-guide-zh-cn/programming-guide/rdds/rdd-persistences.html">https://doc.yonyoucloud.com/doc/spark-programming-guide-zh-cn/programming-guide/rdds/rdd-persistences.html</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/big-data/" rel="tag"># big-data</a>
+          
+            <a href="/tags/spark/" rel="tag"># spark</a>
+          
+            <a href="/tags/rdd/" rel="tag"># rdd</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/09/22/spark-design/" rel="next" title="spark design">
+                <i class="fa fa-chevron-left"></i> spark design
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#RDD"><span class="nav-number">1.</span> <span class="nav-text">RDD</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFRDD"><span class="nav-number">1.1.</span> <span class="nav-text">什么是RDD</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDD%E7%9A%84%E7%89%B9%E7%82%B9"><span class="nav-number">1.2.</span> <span class="nav-text">RDD的特点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDD%E7%9A%84%E5%B1%9E%E6%80%A7"><span class="nav-number">1.3.</span> <span class="nav-text">RDD的属性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDD-Partition"><span class="nav-number">1.4.</span> <span class="nav-text">RDD Partition</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDD-partitioner"><span class="nav-number">1.5.</span> <span class="nav-text">RDD partitioner</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDD-Dependency"><span class="nav-number">1.6.</span> <span class="nav-text">RDD Dependency</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDD-%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">1.7.</span> <span class="nav-text">RDD 持久化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDD-WordCount-Code"><span class="nav-number">1.8.</span> <span class="nav-text">RDD WordCount Code</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE"><span class="nav-number">2.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Shawn</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
