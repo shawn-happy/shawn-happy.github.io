@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="programming-language, golang," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="introductionGo是Google开发的一种静态强类型，编译型，并发型，并具有GC功能的编程语言。 它于2009年由Robert Griesemer、Rob Pike和Ken Thompson作为开源项目发布。 GO是一种类似C语言的编程语言，不仅能够访问底层操作系统，还提供了强大的网络编程，并发编程支持。 GO与C语言有相似的语法，但是对变量的声明不同，GO还支持GC。并发模型采用的是C">
+<meta property="og:type" content="article">
+<meta property="og:title" content="go_tutorial">
+<meta property="og:url" content="http://example.com/2021/10/23/go-tutorial/index.html">
+<meta property="og:site_name" content="Shawn Happy Home">
+<meta property="og:description" content="introductionGo是Google开发的一种静态强类型，编译型，并发型，并具有GC功能的编程语言。 它于2009年由Robert Griesemer、Rob Pike和Ken Thompson作为开源项目发布。 GO是一种类似C语言的编程语言，不仅能够访问底层操作系统，还提供了强大的网络编程，并发编程支持。 GO与C语言有相似的语法，但是对变量的声明不同，GO还支持GC。并发模型采用的是C">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2021-10-22T18:34:06.000Z">
+<meta property="article:modified_time" content="2021-10-22T18:37:08.043Z">
+<meta property="article:author" content="Shawn">
+<meta property="article:tag" content="programming-language, golang">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://example.com/2021/10/23/go-tutorial/"/>
+
+
+
+
+
+  <title>go_tutorial | Shawn Happy Home</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Shawn Happy Home</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/10/23/go-tutorial/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Shawn Happy Home">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">go_tutorial</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2021-10-23T02:34:06+08:00">
+                2021-10-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/golang/" itemprop="url" rel="index">
+                    <span itemprop="name">golang</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="introduction"><a href="#introduction" class="headerlink" title="introduction"></a>introduction</h2><p>Go是Google开发的一种静态强类型，编译型，并发型，并具有GC功能的编程语言。 它于2009年由Robert Griesemer、Rob Pike和Ken Thompson作为开源项目发布。</p>
+<p>GO是一种类似C语言的编程语言，不仅能够访问底层操作系统，还提供了强大的网络编程，并发编程支持。</p>
+<p>GO与C语言有相似的语法，但是对变量的声明不同，GO还支持GC。并发模型采用的是CSP，通过管道传输。</p>
+<p>与c++相比，GO并不包括枚举，异常处理，继承，泛型，断言，虚函数等功能。</p>
+<p>GO的用途很多，可以进行网络编程、系统编程、并发编程、分布式编程。此外，很多重要的开源项目都是使用Go语言开发的，其中包括 Docker，Kubernetes。</p>
+<h2 id="Hello-World"><a href="#Hello-World" class="headerlink" title="Hello World"></a>Hello World</h2><figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Print(<span class="string">&quot;Let&#x27;s GO!&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>go 是编译型语言，可以通过go的命令将其源文件编译成可执行的二进制文件。最简单的命令<code>run</code></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go run helloworld.go</span><br></pre></td></tr></table></figure>
+<p>运行结果：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Let&#x27;s GO!</span><br></pre></td></tr></table></figure>
+<p>可以使用<code>build</code>命令生成可执行的二进制文件</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go build helloworld.go</span><br></pre></td></tr></table></figure>
+<p>随即直接执行</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./helloworld.exe</span><br></pre></td></tr></table></figure>
+<p>注意：</p>
+<ul>
+<li>如果是<code>windows os</code>下<code>build</code>出来的，二进制文件以<code>.exe</code>结尾</li>
+<li>如果是<code>mac ox</code>或者<code>unix</code>下<code>build</code>出来的则没有结尾，直接就是文件名为<code>helloworld</code>的可执行的二进制文件。</li>
+</ul>
+<h2 id="Go-basic-Syntax"><a href="#Go-basic-Syntax" class="headerlink" title="Go basic Syntax"></a>Go basic Syntax</h2><p>go的基础语法由以下部分组成：</p>
+<ul>
+<li>package</li>
+<li>import</li>
+<li>function</li>
+<li>variable</li>
+<li>code(expression)</li>
+<li>comments</li>
+</ul>
+<h3 id="package-amp-import"><a href="#package-amp-import" class="headerlink" title="package&amp;import"></a>package&amp;import</h3><p><code>go</code>是使用包来组织代码的，和其他语言中的库和模块类似。一个包里可以包含一个或者多个<code>.go</code>结尾的源文件，放在一个文件夹中，该文件夹的名字描述了包的作用。</p>
+<p>每个源文件的内容都是以<code>package</code>关键词声明为开头，表明这个文件是属于哪个包下的。如果其他的源文件里想要调用该文件的某个函数或者变量，需要使用<code>import</code>关键词来引用包。</p>
+<p><code>go</code>的标准库中包含100多个包，可以用来日常开发使用，比如<code>fmt</code>中的函数是用来格式化输出。</p>
+<p>其中<code>package main</code>比较特殊，它用来定义一个独立的可执行程序，而不是库。在<code>main</code>包中<code>main</code>函数也是特殊的，总是程序开始执行的地方。</p>
+<p><code>package</code>初始化是从初始化包级别的变量开始，按照顺序自上而下依次初始化，在依赖已解析的情况下，按照依赖顺序执行</p>
+<p>包如果由多个<code>.go</code>文件组成，初始化按照编译器收到的文件顺序执行： <code>go</code>会在调用编译器之前对源文件进行排序。</p>
+<p>也可以使用<code>init</code>函数进行初始化。</p>
+<p>包的初始化按照在程序中导入的顺序进行，如果a包导入了b包，需要先保证b包初始化完毕，再来初始化a包。</p>
+<p>main包是在最后初始化的</p>
+<p>例如：</p>
+<p>新建一个名为bar的包(文件夹)</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> bar</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> a <span class="keyword">int</span> = <span class="number">1</span></span><br><span class="line"><span class="keyword">var</span> b <span class="keyword">int</span> = <span class="number">2</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Println(<span class="string">&quot;Let&#x27;s Go into Bar Package!&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">F</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> a + b</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>调用bar包里的F方法</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line">	<span class="string">&quot;./bar&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> c <span class="keyword">int</span> = bar.F()</span><br><span class="line">	fmt.Printf(<span class="string">&quot;result = %v&quot;</span>, c)</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>执行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">go run .\package_demo.go</span><br><span class="line">Let&#x27;s Go into Bar Package!</span><br><span class="line">result = 3</span><br></pre></td></tr></table></figure>
+
+<p><code>import</code>关键词必须是紧跟在<code>package</code>,如果有多个包需要被引入，可以使用<code>()</code></p>
+<p>例如：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>需要注意的是：</p>
+<ul>
+<li>如果注意如果要包方法在其他包中可以调用，包方法需要首字母大写<code>fmt.Println() fmt.Printf()</code></li>
+<li>包需要精确导入，如果缺失导入或者存在不需要的包的情况下，会编译失败。</li>
+</ul>
+<p>例如：</p>
+<p>引入了没有被使用到的包</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Print(<span class="string">&quot;Let&#x27;s GO!&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>运行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">go run import_package_error.go</span><br><span class="line">import_package_error.go:5:2: imported and not used: &quot;os&quot;</span><br></pre></td></tr></table></figure>
+
+<p>缺失导入的情况：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	fmt.Print(<span class="string">&quot;Let&#x27;s GO!&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>运行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">go run import_package_not_exist.go</span><br><span class="line">import_package_not_exist.go:4:2: undefined: fmt</span><br></pre></td></tr></table></figure>
+
+<p>import其余操作</p>
+<ul>
+<li>别名： 如果两个包的包名存在冲突，或者包名太长需要简写时，我们可以使用别名导入来解决。</li>
+<li>点： <code>.</code>导入可以让包内的方法注册到当前包的上下文中，直接调用方法名即可，不需要再加包前缀。</li>
+<li>下划线: <code>_</code>是包引用操作，只会执行包下各模块中的 init 方法，并不会真正的导入包，所以不可以调用包内的其他方法。</li>
+</ul>
+<p>示例代码：</p>
+<ol>
+<li>别名<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line">	foo <span class="string">&quot;./bar&quot;</span> <span class="comment">// 别名为foo</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> c <span class="keyword">int</span> = foo.F() <span class="comment">// 使用别名调用</span></span><br><span class="line">	fmt.Printf(<span class="string">&quot;result = %v&quot;</span>, c)</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+运行结果：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">go run .\package_alias_demo.go</span><br><span class="line">Let&#x27;s Go into Bar Package!</span><br><span class="line">result = 3</span><br></pre></td></tr></table></figure></li>
+<li>点<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line">	. <span class="string">&quot;./bar&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> c <span class="keyword">int</span> = F()</span><br><span class="line">	fmt.Printf(<span class="string">&quot;result = %v&quot;</span>, c)</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+运行结果：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">go run .\package_point_demo.go</span><br><span class="line">Let&#x27;s Go into Bar Package!</span><br><span class="line">result = 3</span><br></pre></td></tr></table></figure></li>
+<li>下划线<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line">	_ <span class="string">&quot;./bar&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// var c int = bar.F() 错误 _ 并没有导入包 只是引入并执行包模块的init方法</span></span><br><span class="line">	fmt.Printf(<span class="string">&quot;result = %v&quot;</span>, <span class="number">1</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+运行结果：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">go run .\package_underline_demo.go</span><br><span class="line">Let&#x27;s Go into Bar Package!</span><br><span class="line">result = 1</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="variables"><a href="#variables" class="headerlink" title="variables"></a>variables</h3><p><code>var</code>声明创建一个具体类型的变量，然后给这个变量命名，并设置它的初始值。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> name <span class="keyword">type</span> = expression</span><br></pre></td></tr></table></figure>
+<p><code>type</code>和<code>expression</code>可以省略一个，但是不能都省略：</p>
+<ul>
+<li>如果类型省略，它的类型将由初始表达式决定。</li>
+<li>如果表达式省略，则为默认值<br>默认值列表：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数字</td>
+<td>0</td>
+</tr>
+<tr>
+<td>bool</td>
+<td>false</td>
+</tr>
+<tr>
+<td>String</td>
+<td>“”</td>
+</tr>
+<tr>
+<td>接口和引用类型（slice, 指针, map, 通道, 函数）</td>
+<td>nil</td>
+</tr>
+<tr>
+<td>数组，结构体，复合类型</td>
+<td>复合0</td>
+</tr>
+</tbody></table>
+<h3 id="function-amp-code-block-expression"><a href="#function-amp-code-block-expression" class="headerlink" title="function &amp; code block(expression)"></a>function &amp; code block(expression)</h3><p>函数的声明表达式：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">name</span><span class="params">(parameter-list)</span><span class="params">(<span class="keyword">return</span>-list)</span></span>&#123;</span><br><span class="line">    code block</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>函数的声明都是以<code>func</code>开头，随后跟着函数名，第一个小括号里的是形参列表，第二个小括号里的是可选的返回列表，使用大括号包裹着代码块（函数体）</p>
+<p>形参列表指定了一组变量的参数名和参数类型，由调用者提供实参传递。</p>
+<p>返回列表则指定了函数返回值的类型，当函数返回一个未命名的返回值或者没有返回值的时候，可以省略括号。</p>
+<p>例如：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">sum</span><span class="params">(a, b <span class="keyword">float64</span>)</span> <span class="title">float64</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> a + b</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="comments"><a href="#comments" class="headerlink" title="comments"></a>comments</h3><p> <code>/*...*/</code> 是注释，在程序执行时将被忽略。单行注释是最常见的注释形式，你可以在任何地方使用以<code>//</code>开头的单行注释。多行注释也叫块注释，均已以<code>/*</code>开头，并以 <code>*/</code>结尾，且不可以嵌套使用，多行注释一般用于包的文档描述或注释成块的代码片段。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 单行注释</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">多行注释</span></span><br><span class="line"><span class="comment">块注释</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><p><a target="_blank" rel="noopener" href="http://www.gopl.io/ch1.pdf">go程序设计语言</a></p>
+<p><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Communicating_sequential_processes">go wiki</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/programming-language-golang/" rel="tag"># programming-language, golang</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/09/23/spark-rdd/" rel="next" title="spark rdd">
+                <i class="fa fa-chevron-left"></i> spark rdd
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#introduction"><span class="nav-number">1.</span> <span class="nav-text">introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hello-World"><span class="nav-number">2.</span> <span class="nav-text">Hello World</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Go-basic-Syntax"><span class="nav-number">3.</span> <span class="nav-text">Go basic Syntax</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#package-amp-import"><span class="nav-number">3.1.</span> <span class="nav-text">package&amp;import</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#variables"><span class="nav-number">3.2.</span> <span class="nav-text">variables</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#function-amp-code-block-expression"><span class="nav-number">3.3.</span> <span class="nav-text">function &amp; code block(expression)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#comments"><span class="nav-number">3.4.</span> <span class="nav-text">comments</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#References"><span class="nav-number">4.</span> <span class="nav-text">References</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Shawn</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
