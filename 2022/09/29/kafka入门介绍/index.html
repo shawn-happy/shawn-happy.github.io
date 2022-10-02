@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="最近正在学习Kafka，按照自己的理解整理一些关于Kafka的入门知识，并且希望对各位同学有所帮助。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kafka入门介绍">
+<meta property="og:url" content="http://example.com/2022/09/29/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/index.html">
+<meta property="og:site_name" content="Shawn Home">
+<meta property="og:description" content="最近正在学习Kafka，按照自己的理解整理一些关于Kafka的入门知识，并且希望对各位同学有所帮助。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/kafka%E6%9E%B6%E6%9E%84.svg">
+<meta property="og:image" content="http://example.com/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/kafka-write-partition.png">
+<meta property="og:image" content="http://example.com/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/point-to-point-queue.svg">
+<meta property="og:image" content="http://example.com/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/publish-subscribe.svg">
+<meta property="og:image" content="http://example.com/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/mixer.svg">
+<meta property="article:published_time" content="2022-09-28T17:35:55.000Z">
+<meta property="article:modified_time" content="2022-10-02T20:22:54.525Z">
+<meta property="article:author" content="Shawn">
+<meta property="article:tag" content="kafka">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/kafka%E6%9E%B6%E6%9E%84.svg">
+
+<link rel="canonical" href="http://example.com/2022/09/29/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>kafka入门介绍 | Shawn Home</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Shawn Home</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/09/29/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Shawn">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Shawn Home">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          kafka入门介绍
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-09-29 01:35:55" itemprop="dateCreated datePublished" datetime="2022-09-29T01:35:55+08:00">2022-09-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-10-03 04:22:54" itemprop="dateModified" datetime="2022-10-03T04:22:54+08:00">2022-10-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%8E%E7%AB%AF/" itemprop="url" rel="index"><span itemprop="name">后端</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%8E%E7%AB%AF/%E6%B6%88%E6%81%AF%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">消息系统</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%8E%E7%AB%AF/%E6%B6%88%E6%81%AF%E7%B3%BB%E7%BB%9F/%E5%88%86%E5%B8%83%E5%BC%8F/" itemprop="url" rel="index"><span itemprop="name">分布式</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>最近正在学习Kafka，按照自己的理解整理一些关于Kafka的入门知识，并且希望对各位同学有所帮助。</p>
+<span id="more"></span>
+
+<h1 id="Kafka简介"><a href="#Kafka简介" class="headerlink" title="Kafka简介"></a>Kafka简介</h1><p>Kafka是最初由Linkedin公司开发，是一个基于zookeeper协调的分布式的提交日志系统(a distributed commit log)，常见可以用于web/nginx日志、访问日志，消息服务等等，Linkedin于2010年贡献给了Apache基金会并成为顶级开源项目。</p>
+<p>kafka既是消息引擎系统，也是分布式流数据处理平台。</p>
+<p>Kafka主要设计目标如下：</p>
+<ul>
+<li>以时间复杂度为O(1)的方式提供消息持久化能力，即使对TB级以上数据也能保证常数时间的访问性能。</li>
+<li>高吞吐率。即使在非常廉价的商用机器上也能做到单机支持每秒100K条消息的传输。</li>
+<li>支持Kafka Server间的消息分区，及分布式消费，同时保证每个partition内的消息顺序传输。</li>
+<li>同时支持离线数据处理和实时数据处理。</li>
+<li>Scale out:支持在线水平扩展</li>
+</ul>
+<h1 id="kafka架构"><a href="#kafka架构" class="headerlink" title="kafka架构"></a>kafka架构</h1><h2 id="Kafka拓扑结构"><a href="#Kafka拓扑结构" class="headerlink" title="Kafka拓扑结构"></a>Kafka拓扑结构</h2><p><img src="/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/kafka%E6%9E%B6%E6%9E%84.svg" alt="kafka拓扑结构"></p>
+<p>如上图所示，一个kafka集群由多个Broker和一个Zookeeper集群组成，并且Kafka 支持水平扩展，一般 broker 数量越多，集群吞吐率越高。Kafka 通过 Zookeeper 管理集群配置，选举 leader，以及在 Consumer Group 发生变化时进行 rebalance。可以由多个Producer往kafka里生产数据，由多个Consumer Group从kafka里消费数据，Producer 使用 push 模式将消息发布到 broker，Consumer 使用 pull 模式从 broker 订阅并消费消息。</p>
+<p>这里关于kafka的术语很多，下面简单介绍一下kafka的基本术语。</p>
+<h2 id="Kafka术语"><a href="#Kafka术语" class="headerlink" title="Kafka术语"></a>Kafka术语</h2><ul>
+<li><p><strong>Broker</strong></p>
+<ul>
+<li>Kafka 集群包含一个或多个服务器，服务器节点称为broker。</li>
+<li>broker存储topic的数据。如果某topic有N个partition，集群有N个broker，那么每个broker存储该topic的一个partition。</li>
+<li>如果某topic有N个partition，集群有(N+M)个broker，那么其中有N个broker存储该topic的一个partition，剩下的M个broker不存储该topic的partition数据。</li>
+<li>如果某topic有N个partition，集群中broker数目少于N个，那么一个broker存储该topic的一个或多个partition。在实际生产环境中，尽量避免这种情况的发生，这种情况容易导致Kafka集群数据不均衡。</li>
+</ul>
+</li>
+<li><p><strong>Topic</strong></p>
+<ul>
+<li>每条发布到 Kafka 集群的消息都有一个类别，这个类别被称为 Topic。</li>
+<li>类似于数据库的表名。</li>
+</ul>
+</li>
+<li><p><strong>Partition</strong></p>
+<ul>
+<li>每个 Topic 包含一个或多个 Partition。</li>
+<li>每个partition中的数据使用多个segment文件存储。</li>
+</ul>
+</li>
+<li><p><strong>Producer</strong></p>
+<ul>
+<li>数据的发布者，该角色将消息发布到Kafka的topic中。</li>
+<li>生产者发送的消息，存储到一个partition中，生产者也可以指定数据存储的partition。</li>
+</ul>
+</li>
+<li><p><strong>Consumer Group</strong></p>
+<ul>
+<li>每个 Consumer 属于一个特定的 Consumer Group。</li>
+<li>可为每个 Consumer 指定 group name，若不指定 group name 则属于默认的 group</li>
+</ul>
+</li>
+<li><p><strong>Consumer</strong></p>
+<ul>
+<li>消费者可以从broker中读取数据。</li>
+<li>消费者可以消费多个topic中的数据。</li>
+</ul>
+</li>
+<li><p><strong>Replica</strong></p>
+<ul>
+<li>Kafka 中同一条消息能够被拷贝到多个地方以提供数据冗余，这些地方就是所谓的Replica。</li>
+<li>分为Leader Replica和Follower Replica。</li>
+</ul>
+</li>
+</ul>
+<h2 id="关系解释"><a href="#关系解释" class="headerlink" title="关系解释"></a>关系解释</h2><p>我们已经基本了解kafka相关术语的解释，但这些组件之间的关系是什么样的呢？</p>
+<h3 id="Topic-amp-Partition-amp-Replica"><a href="#Topic-amp-Partition-amp-Replica" class="headerlink" title="Topic&amp;Partition&amp;Replica"></a>Topic&amp;Partition&amp;Replica</h3><p>Topic在逻辑上相当于是一个Message Queue，每条消息都必须指定一个Queue来存储。为了提高Kafka的吞吐率，Topic在物理上会分为多个Partition，每个Partition会在对应的Broker所在机器上有一个文件夹，这个文件夹在存放着该Partition上的message和index。如果Kafka集群里有2个Topic，Topic 1有3个Partition，Topic 2有5个Partition，那么在整个Kafka集群里会创建8个文件夹来存储。</p>
+<p>Partition的消息会Append到log文件的尾部，顺序写入磁盘（这也是高吞吐率的原因之一）。每条消息在log文件中的位置成为offset（偏移量），offset为一个long型数字，唯一标记一条消息。</p>
+<p><img src="/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/kafka-write-partition.png" alt="kafka-write-partition"></p>
+<p>log文件里会存在哪些内容（消息格式）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">message length ： 4 bytes (value: 1+4+n)</span><br><span class="line">&quot;magic&quot; value ： 1 byte </span><br><span class="line">crc ： 4 bytes </span><br><span class="line">payload ： n bytes </span><br><span class="line">offset ：unique long</span><br></pre></td></tr></table></figure>
+
+<p>虽说数据存储在各个Partition里，不会受限于一台机器，可以分布在多台机器上，但是如果数据过大的时候还是会影响读写性能。所以Kafka会将log文件根据文件大小，时间等策略分成多个<strong>segment</strong>文件，每个segment文件都会有索引，可以通过索引来提高读写性能。</p>
+<p>对于传统的 message queue 而言，一般会删除已经被消费的消息，而 Kafka 集群会保留所有的消息，无论其被消费与否。当然，因为磁盘限制，不可能永久保留所有数据（实际上也没必要），因此 Kafka 提供两种策略删除旧数据。一是基于时间，二是基于 Partition 文件大小。例如可以通过配置 $KAFKA_HOME/config/server.properties，让 Kafka 删除一周前的数据，也可在 Partition 文件超过 1GB 时删除旧数据，配置如下所示。</p>
+<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># The minimum age of a log file to be eligible for deletion</span></span><br><span class="line"><span class="attr">log.retention.hours</span>=<span class="string">168</span></span><br><span class="line"><span class="comment"># The maximum size of a log segment file. When this size is reached a new log segment will be created.</span></span><br><span class="line"><span class="attr">log.segment.bytes</span>=<span class="string">1073741824</span></span><br><span class="line"><span class="comment"># The interval at which log segments are checked to see if they can be deleted according to the retention policies</span></span><br><span class="line"><span class="attr">log.retention.check.interval.ms</span>=<span class="string">300000</span></span><br><span class="line"><span class="comment"># If log.cleaner.enable=true is set the cleaner will be enabled and individual logs can then be marked for log compaction.</span></span><br><span class="line"><span class="attr">log.cleaner.enable</span>=<span class="string">false</span></span><br></pre></td></tr></table></figure>
+
+<p>kafka是号称高可以的分布式消息系统，但是如果某个Partition所在的Broker挂了导致Partition失效了，导致数据丢失，那还怎么保证高可用呢？一般来说，分布式存储系统保证高可用的手段通常是做数据冗余（Replica），同样Kafka也是这么设计的，Kafka会通过选举策略来选出某个Partition的Leader Replica和Followe Replica。</p>
+<p>例如某个 Topic 分成了 3 个 Partition，每个 Partition 保存了两个副本，副本平均分配到 3 个 Broker 上。即使有一个 Broker 挂了，剩余的两个 Broker 依旧能正常工作，如果有Broker挂了，kafka会重新进行选举。</p>
+<p>此外还需要知道的是，对kafka的读写请求都会通过Leader Replica来处理，数据的同步，也是把Follower Replica当成一个Consumer来从Leader Replica处同步消息。</p>
+<h3 id="Producer"><a href="#Producer" class="headerlink" title="Producer"></a>Producer</h3><p>主要工作是向Topic生产消息。Topic有多个Partition组成（通过<code>num.partitions</code>参数指定），那生产的消息是知道需要路由到哪个Partition呢？这个主要由分区策略决定的</p>
+<p>一般的分区策略有：</p>
+<ol>
+<li>轮询</li>
+<li>随机</li>
+<li>Hash</li>
+</ol>
+<p>也可以自定义分区策略，实现<code>Partitioner</code>接口</p>
+<p>主要工作是向Topic生产消息。但由于副本机制，生产者发送消息怎么样算发送成功呢？<strong>在一般的分布式系统中一般采用过半提交的方式确保，既一半以上的副本确认成功才算消息提交成功，但Kafka中并未提供这种机制。</strong>可以通过以下参数配置保障：</p>
+<p>Producer提供配置<code>acks</code>参数</p>
+<ul>
+<li><strong><code>acks=0</code></strong> 生产者只要将消息发送出去，无需等待任何副本的确认，即算发送成功。<strong>此方式吞吐量最大、性能最好，但kafka服务抖动时容易丢消息</strong></li>
+<li><strong><code>acks=1</code></strong> <strong>默认</strong>。生产者将消息发送出去，只需副本中的<code>leader</code>确认，即算发送成功。<strong>此方式吞吐量和性能优秀，但当<code>leader</code>挂时会造成小部分消息丢失</strong></li>
+<li><strong><code>acks=all</code></strong> 生产者将消息发送出去，需要<code>ISR</code>中的副本全部确认，即算发送成功。<strong>此方式吞吐量和性能差，但稳定性最高，消息不容易丢失</strong></li>
+</ul>
+<p>这个里有个新的术语，什么是ISR？除了ISR还有AR和OSR也是需要清楚的。</p>
+<ul>
+<li>AR（Assigned Replicas）：分区中的所有副本统称为AR。</li>
+<li>ISR（In-Sync Replicas）：所有与leader副本保持一定程度同步的副本（包括leader副本在内）组成ISR，ISR集合是AR集合中的一个子集。</li>
+<li>OSR（Out-of-Sync Replicas）：与leader副本同步滞后过多的副本（不包括leader副本）组成OSR</li>
+</ul>
+<p>leader副本负责维护和跟踪ISR集合中所有follower副本的滞后状态，当follower副本落后太多或失效时（<code>replica.lag.time.max.ms</code>Broker提供的配置参数），leader副本会把它从ISR集合中剔除。</p>
+<p>如果OSR集合中有follower副本“追上”了leader副本，那么leader副本会把它从OSR集合转移至ISR集合。</p>
+<p>默认情况下，当leader副本发生故障时，只有在ISR集合中的副本才有资格被选举为新的leader，而在OSR集合中的副本则没有任何机会。</p>
+<h3 id="Consumer-amp-Consumer-Group"><a href="#Consumer-amp-Consumer-Group" class="headerlink" title="Consumer &amp; Consumer Group"></a>Consumer &amp; Consumer Group</h3><p>主要工作是从Topic消费消息，既然主要工作是消费消息，就会有这样一些问题，比如它的消费模式是什么？是点对点模式还是发布订阅模式？是Topic Push消息给Consumer还是Consumer主动从Topic里Pull消息？Topic是会被分成若干个Partition，Consumer消费的是哪个Partition里的数据？是怎么分配的？</p>
+<p>接下来我们就对着这些问题，一一说道说道。</p>
+<h4 id="消费模式"><a href="#消费模式" class="headerlink" title="消费模式"></a>消费模式</h4><p>传统的消息引擎系统主要有两种主要的消息传递模式：</p>
+<ul>
+<li><strong>点对点模式：</strong><ul>
+<li>多个消费者共同消费同一个队列，每条消息只发送给一个消费者，可以快速地消费掉队列里的消息。</li>
+</ul>
+</li>
+</ul>
+<p><img src="/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/point-to-point-queue.svg" alt="point-to-point-queue.svg"></p>
+<ul>
+<li><strong>发布-订阅模式：</strong><ul>
+<li>多个消费者订阅主题，每个消息会发布给所有的消费者。</li>
+<li>一个消息可以被多次消费，能支持冗余的消费。</li>
+</ul>
+</li>
+</ul>
+<p><img src="/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/publish-subscribe.svg" alt="publish-subscribe.svg"></p>
+<p>点对点模式的主要优点就是可以多个消费者共同消费同一个队列，效率高，而发布订阅模式的优点则是一个消息可以被多次消费，能支持冗余的消费。为了两种模式的优点都能够用上，来提高消费的效率和伸缩性，kafka引入了Consumer Group的概念。</p>
+<ul>
+<li>Consumer Group 是以发布/订阅模式工作的。</li>
+<li>Consumer Group里的Consumer是以点对点模式工作的。</li>
+</ul>
+<p><img src="/images/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/mixer.svg" alt="mixer.svg"></p>
+<h4 id="Pull-VS-Push"><a href="#Pull-VS-Push" class="headerlink" title="Pull VS Push"></a>Pull VS Push</h4><ul>
+<li><strong>push</strong>: 当生产者发送消息的速度比消费者消费消息的速度快时，Broker服务一直向消费者push消息，消费者可能承受不了压力而宕机。但这样的好处是，Broker不容易积压消息。</li>
+<li><strong>pull</strong>: 当生产者发送消息的速度比消费者消费消息的速度快时，消费者只是消费落后，后面可能赶上。消息积压在Broker上。</li>
+</ul>
+<p>Kafka Consumer采用的是pull模式，Consumer可以自由的控制消费的速率。</p>
+<h4 id="Consumer-amp-Consumer-Group-amp-Partition"><a href="#Consumer-amp-Consumer-Group-amp-Partition" class="headerlink" title="Consumer &amp; Consumer Group &amp; Partition"></a>Consumer &amp; Consumer Group &amp; Partition</h4><p>Topic由多个Partition组成，Producer往Toplic里生产消息，这些消息会通过分区策略分配到不同的Partition，那Consumer Group定于的Topic能按照生产消息的顺序消费吗？</p>
+<p>答案是不能的，Kafka 只会保证在 Partition 内消息是有序的，而不管全局的情况。</p>
+<p>同一 Topic 的一条消息只能被同一个 Consumer Group 内的一个 Consumer 消费，但多个 Consumer Group 可同时消费这一消息。</p>
+<p>那Consumer是如何选择Partition进行消费的呢？默认情况下（RangeAssignor）是：</p>
+<ol>
+<li>若consumer group中的consumer数量少于partition数量，则至少有1个consumer会消费多个partition数据</li>
+<li>若consumer group中的consumer数量多于partition数量，则会有部分consumer无法消费该topic中任何一条消息</li>
+<li>若consumer group中的consumer数量等于partition数量，则正好一个consumer消费一个partition数据</li>
+</ol>
+<p>为了保证Consumer负载大致相同，Kafka除了<code>Range</code>还提供了另外两种算法：<code>RoundRobin</code>和<code>Sticky</code></p>
+<h1 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h1><ul>
+<li>Topic是一个抽象概念，相当于一个Message Queue，但是Partition才是消息存储的实际单位。Producer生产的消息实际上是根据一些分区策略存储到Partition里，Consumer也会通过分区分配策略来从Partition里消费数据。</li>
+<li>Kafka 会保证一个 Consumer 收到的消息中，来自同一个 Partition 的所有消息是有序的。而来自不同 Partition 的消息则不保证有序。</li>
+<li>Kafka有Consumer Group的概念，用于将点对点模式和发布订阅模式相结合。Consumer Group对应着发布订阅模式，即多个Group可以订阅相同的Topic，且互不干扰。Consumer Group里Consumer实例对应着点对点模式，顺序消费消息，并且效率高。</li>
+<li>消息是存在 Broker 上的，一般对应为一台物理机或集群。存储时，每个 Partition 都可以有多个副本。</li>
+<li>对于一个 Partition，它的多个复本存储一般存储在不同 Broker 中，在同一时刻会由 Zookeeper 选出一个主副本来负责所有的读写操作。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/kafka/" rel="tag"># kafka</a>
+          </div>
+
+        
+
+
+        
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Kafka%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">Kafka简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#kafka%E6%9E%B6%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">kafka架构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Kafka%E6%8B%93%E6%89%91%E7%BB%93%E6%9E%84"><span class="nav-number">2.1.</span> <span class="nav-text">Kafka拓扑结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Kafka%E6%9C%AF%E8%AF%AD"><span class="nav-number">2.2.</span> <span class="nav-text">Kafka术语</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E7%B3%BB%E8%A7%A3%E9%87%8A"><span class="nav-number">2.3.</span> <span class="nav-text">关系解释</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Topic-amp-Partition-amp-Replica"><span class="nav-number">2.3.1.</span> <span class="nav-text">Topic&amp;Partition&amp;Replica</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Producer"><span class="nav-number">2.3.2.</span> <span class="nav-text">Producer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Consumer-amp-Consumer-Group"><span class="nav-number">2.3.3.</span> <span class="nav-text">Consumer &amp; Consumer Group</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B6%88%E8%B4%B9%E6%A8%A1%E5%BC%8F"><span class="nav-number">2.3.3.1.</span> <span class="nav-text">消费模式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Pull-VS-Push"><span class="nav-number">2.3.3.2.</span> <span class="nav-text">Pull VS Push</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Consumer-amp-Consumer-Group-amp-Partition"><span class="nav-number">2.3.3.3.</span> <span class="nav-text">Consumer &amp; Consumer Group &amp; Partition</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Shawn</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">1</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Shawn</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
