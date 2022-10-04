@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="最近部门正在使用Spark做ETL，在使用JDBC作为DataSource的时候遇到了一些坑爹的问题，本文主要分享一下我遇到的问题和一些解决方案，当然可能会有更好的解决方案，还请各位大佬在评论区给点意见。另外，本文会涉及一些Spark的源码分析，我使用的版本是org.apache.spark:spark-sql_2.12:3.2.1 首先简单介绍一下Spark SQL读写JDBC的基本操作和参数配">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SparkSQL读写jdbc一些鲜为人知的事儿">
+<meta property="og:url" content="http://example.com/2022/10/03/SparkSQL%E8%AF%BB%E5%86%99jdbc%E4%B8%80%E4%BA%9B%E9%B2%9C%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E4%BA%8B%E5%84%BF/index.html">
+<meta property="og:site_name" content="Shawn Home">
+<meta property="og:description" content="最近部门正在使用Spark做ETL，在使用JDBC作为DataSource的时候遇到了一些坑爹的问题，本文主要分享一下我遇到的问题和一些解决方案，当然可能会有更好的解决方案，还请各位大佬在评论区给点意见。另外，本文会涉及一些Spark的源码分析，我使用的版本是org.apache.spark:spark-sql_2.12:3.2.1 首先简单介绍一下Spark SQL读写JDBC的基本操作和参数配">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-10-03T06:53:51.000Z">
+<meta property="article:modified_time" content="2022-10-04T17:24:41.936Z">
+<meta property="article:author" content="Shawn">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="SparkSQL">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2022/10/03/SparkSQL%E8%AF%BB%E5%86%99jdbc%E4%B8%80%E4%BA%9B%E9%B2%9C%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E4%BA%8B%E5%84%BF/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>SparkSQL读写jdbc一些鲜为人知的事儿 | Shawn Home</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Shawn Home</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/10/03/SparkSQL%E8%AF%BB%E5%86%99jdbc%E4%B8%80%E4%BA%9B%E9%B2%9C%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E4%BA%8B%E5%84%BF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Shawn">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Shawn Home">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SparkSQL读写jdbc一些鲜为人知的事儿
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-10-03 14:53:51" itemprop="dateCreated datePublished" datetime="2022-10-03T14:53:51+08:00">2022-10-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-10-05 01:24:41" itemprop="dateModified" datetime="2022-10-05T01:24:41+08:00">2022-10-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%8E%E7%AB%AF/" itemprop="url" rel="index"><span itemprop="name">后端</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%8E%E7%AB%AF/%E5%A4%A7%E6%95%B0%E6%8D%AE/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%8E%E7%AB%AF/%E5%A4%A7%E6%95%B0%E6%8D%AE/Spark/" itemprop="url" rel="index"><span itemprop="name">Spark</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>最近部门正在使用Spark做ETL，在使用JDBC作为DataSource的时候遇到了一些坑爹的问题，本文主要分享一下我遇到的问题和一些解决方案，当然可能会有更好的解决方案，还请各位大佬在评论区给点意见。另外，本文会涉及一些Spark的源码分析，我使用的版本是<code>org.apache.spark:spark-sql_2.12:3.2.1</code></p>
+<p>首先简单介绍一下Spark SQL读写JDBC的基本操作和参数配置。</p>
+<span id="more"></span>
+
+<h1 id="SparkSQL读写JDBC"><a href="#SparkSQL读写JDBC" class="headerlink" title="SparkSQL读写JDBC"></a>SparkSQL读写JDBC</h1><p>Spark SQL支持通过JDBC直接读取数据库中的数据，这个特性是基于JdbcRDD实现，返回值作为DataFrame返回或者注册成Spark SQL的临时表，用户可以在数据源选项中配置JDBC相关的连接参数，user和password一般是必须提供的参数，常用的参数列表如下：</p>
+<table>
+<thead>
+<tr>
+<th>参数名称</th>
+<th>参数说明</th>
+<th>作用范围</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>url</td>
+<td>数据库连接jdbc url</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>user</td>
+<td>数据库登陆用户名</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>password</td>
+<td>数据库登陆密码</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>dbtable</td>
+<td>需要读取或者写入的JDBC表。注意不能同时配置dbtable和query。</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>query</td>
+<td>query用于指定from后面的子查询，拼接成的sql如下：SELECT FROM () spark_gen_alias 。<br />注意dbtable和query不能同时使用；<br />不允许同时使用partitionColumn和query。</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>driver</td>
+<td>jdbc驱动driver</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>partitionColumn, lowerBound, upperBound</td>
+<td>指定时这三项需要同时存在，描述了worker如何并行读取数据库。<br />其中partitionColumn必须是数字、date、timestamp。<br />lowerBound和upperBound只是决定了分区的步长，而不会过滤数据，因此表中所有的数据都会被分区返回</td>
+<td>read</td>
+</tr>
+<tr>
+<td>numPartitions</td>
+<td>读写时的最大分区数。这也决定了连接JDBC的最大连接数，如果并行度超过该配置，将会使用coalesce(partition)来降低并行度。</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>queryTimeout</td>
+<td>driver执行statement的等待时间，0意味着没有限制。<br />写入的时候这个选项依赖于底层是如何实现setQueryTimeout的</td>
+<td>read/write</td>
+</tr>
+<tr>
+<td>fetchsize</td>
+<td>fetch的大小，决定了每一个fetch，拉取多少数据量。</td>
+<td>read</td>
+</tr>
+<tr>
+<td>batchsize</td>
+<td>batch大小，决定插入时的并发大小，默认1000。</td>
+<td>write</td>
+</tr>
+<tr>
+<td>isolationLevel</td>
+<td>事务隔离的等级，作用于当前连接，默认是READ_UNCOMMITTED。<br />可以配置成NONE, READ_COMMITTED, READ_UNCOMMITTED, REPEATABLE_READ, SERIALIZABLE。<br />依赖于底层jdbc提供的事务隔离。</td>
+<td>write</td>
+</tr>
+<tr>
+<td>truncate</td>
+<td>当使用SaveMode.Overwrite时，该配置才会生效。<br />默认是false，会先删除表再创建表，会改变原有的表结构。<br />如果是true，则会直接执行truncate table，但是由于各个DBMS的行为不同，使用它并不总是安全的，并不是所有的DBMS都支持truncate。</td>
+<td>write</td>
+</tr>
+</tbody></table>
+<p>基础代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Note: JDBC loading and saving can be achieved via either the load/save or jdbc methods</span></span><br><span class="line"><span class="comment">// Loading data from a JDBC source</span></span><br><span class="line">Dataset&lt;Row&gt; jdbcDF = spark.read()</span><br><span class="line">  .format(<span class="string">&quot;jdbc&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;url&quot;</span>, <span class="string">&quot;jdbc:postgresql:dbserver&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;dbtable&quot;</span>, <span class="string">&quot;schema.tablename&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;username&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;password&quot;</span>)</span><br><span class="line">  .load();</span><br><span class="line"></span><br><span class="line"><span class="type">Properties</span> <span class="variable">connectionProperties</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Properties</span>();</span><br><span class="line">connectionProperties.put(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;username&quot;</span>);</span><br><span class="line">connectionProperties.put(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;password&quot;</span>);</span><br><span class="line">Dataset&lt;Row&gt; jdbcDF2 = spark.read()</span><br><span class="line">  .jdbc(<span class="string">&quot;jdbc:postgresql:dbserver&quot;</span>, <span class="string">&quot;schema.tablename&quot;</span>, connectionProperties);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Saving data to a JDBC source</span></span><br><span class="line">jdbcDF.write()</span><br><span class="line">  .format(<span class="string">&quot;jdbc&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;url&quot;</span>, <span class="string">&quot;jdbc:postgresql:dbserver&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;dbtable&quot;</span>, <span class="string">&quot;schema.tablename&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;username&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;password&quot;</span>)</span><br><span class="line">  .save();</span><br><span class="line"></span><br><span class="line">jdbcDF2.write()</span><br><span class="line">  .jdbc(<span class="string">&quot;jdbc:postgresql:dbserver&quot;</span>, <span class="string">&quot;schema.tablename&quot;</span>, connectionProperties);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Specifying create table column data types on write</span></span><br><span class="line">jdbcDF.write()</span><br><span class="line">  .option(<span class="string">&quot;createTableColumnTypes&quot;</span>, <span class="string">&quot;name CHAR(64), comments VARCHAR(1024)&quot;</span>)</span><br><span class="line">  .jdbc(<span class="string">&quot;jdbc:postgresql:dbserver&quot;</span>, <span class="string">&quot;schema.tablename&quot;</span>, connectionProperties);</span><br></pre></td></tr></table></figure>
+
+<h1 id="Q-amp-A"><a href="#Q-amp-A" class="headerlink" title="Q&amp;A"></a>Q&amp;A</h1><p>简单介绍了一下SparkSQL读写JDBC的操作，接下来介绍一下我在项目上遇到的一些问题。</p>
+<ol>
+<li>我想利用数据库索引，能提高查询速度，能过滤掉一些数据，并不想全表查询生成DataFrame，然后通过DataFrame操作过滤数据。（虽说我也不知道性能能提高多少，有懂哥也可以帮忙解释一下）</li>
+<li>dbtable和query应该用什么？到底有什么样的区别？</li>
+<li>本来想指定<code>numPartitions</code>，用来提高并行度，但是并不管用，通过源码查看，发现还是需要跟<code>partitionColumn, lowerBound, upperBound</code>三个参数一起使用才会生效，但是并不是每个表都有符合分区的字段，比如查询的字段都是字符串类型，那就只能通过调用<code>DataFrame.repartition(numPartitions)</code>，但是需要先把数据全部都查出来再进行分区。</li>
+<li>使用<code>DataFrame.write()</code>方法很暴力，竟然会改变表的结构？</li>
+</ol>
+<h2 id="Q1-哪个查询性能更好？"><a href="#Q1-哪个查询性能更好？" class="headerlink" title="Q1: 哪个查询性能更好？"></a>Q1: 哪个查询性能更好？</h2><p>看下面的方法。方式1是通过query中写sql语句带着查询的条件，并且字段是索引字段。方式2则是通过操作DataFrame来过滤的。这两种方式哪种性能更好呢？</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 方式1</span></span><br><span class="line">spark</span><br><span class="line">  .read()</span><br><span class="line">  .format(<span class="string">&quot;jdbc&quot;</span>)</span><br><span class="line">  .option(</span><br><span class="line">  <span class="string">&quot;url&quot;</span>,</span><br><span class="line">  <span class="string">&quot;jdbc:mysql://localhost:3306/test?createDatabaseIfNotExist=true&amp;serverTimezone=UTC&amp;useSSL=true&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;driver&quot;</span>, <span class="string">&quot;com.mysql.cj.jdbc.Driver&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;query&quot;</span>, <span class="string">&quot;select * from user where id &gt; 10&quot;</span>)</span><br><span class="line">  .load();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 方式2</span></span><br><span class="line">spark</span><br><span class="line">  .read()</span><br><span class="line">  .format(<span class="string">&quot;jdbc&quot;</span>)</span><br><span class="line">  .option(</span><br><span class="line">  <span class="string">&quot;url&quot;</span>,</span><br><span class="line">  <span class="string">&quot;jdbc:mysql://localhost:3306/test?createDatabaseIfNotExist=true&amp;serverTimezone=UTC&amp;useSSL=true&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;driver&quot;</span>, <span class="string">&quot;com.mysql.cj.jdbc.Driver&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;query&quot;</span>, <span class="string">&quot;select * from user where id &gt; 10&quot;</span>)</span><br><span class="line">  .load()</span><br><span class="line">  .where(<span class="string">&quot;id &gt; 10&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>除了性能，还有另外一个话题也可以说道说道。一般来说传给SQL的查询参数是固定的，但是每次查询的参数值是不固定的。例如<code>select * from user where birthday &gt;= ? and birthday &lt; ?</code>，根据生日的区间来查看用户列表。</p>
+<p>如果采用方式1，有个很尴尬的问题，参数值如何传进去呢？看Spark SQL关于JDBC DataSource的文档发现并没有关于这一块的配置，通过源码查看也并未发现可以传参数进去的方式。</p>
+<p>目前我能想到的方式有两种。</p>
+<p>第一种通过字符串替换的方式，生成对应的SQL语句。举例来说，传给main方法参数有</p>
+<ul>
+<li><code>sql=select * from user where birthday &gt;= $&#123;startTime&#125; and birthday &lt; $&#123;endTime&#125;</code></li>
+<li><code>params=[startTime: 1995-02-01, endTime: 2000-02-01]</code></li>
+</ul>
+<p>然后通过字符串替换的方式，将sql替换为<code>select * from user where birthday &gt;= &#39;1995-02-01&#39; and birthday &lt; &#39;2000-02-01&#39;</code></p>
+<p>但上述的方式有个致命的缺陷，就是SQL注入，那么如何解决SQL注入的问题呢？</p>
+<p>其实答案也很简单，通过<code>prepareStatement</code>来set参数，那么就需要params里带着参数的类型，例如<code>params=[&#123;&quot;name&quot;: &quot;startTime&quot;, &quot;value&quot;: &#39;1995-02-01&#39;, &quot;type&quot;: &quot;Date&quot;&#125;, &#123;&quot;name&quot;: &quot;endTime&quot;, &quot;value&quot;: &#39;2000-02-01&#39;, &quot;type&quot;: &quot;Date&quot;&#125;]</code>。那么可以通过<code>prepareStatement.setDate</code>方法给参数赋值即可，最后通过<code>prepareStatement.toString()</code>方法来获取到预处理之后的SQL，这样就能保证SQL不会被注入了。</p>
+<p>虽说这个方法避免了SQL的注入，但是<code>prepareStatement.toString()</code>具体实现依赖各个数据库提供的驱动包，MySQL是会打印预处理之后的SQL，但是不能保证其他数据库（例如Oracle）也会有相同的行为，这个需要对其他数据库也要充分的调研。</p>
+<p>第二种方法则是通过SparkSQL方式</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">spark.sql(<span class="string">&quot;set startTime = 1995-02-01&quot;</span>);</span><br><span class="line">spark.sql(<span class="string">&quot;set endTime = 2000-02-01&quot;</span>);</span><br><span class="line">spark</span><br><span class="line">  .read()</span><br><span class="line">  .format(<span class="string">&quot;jdcb&quot;</span>)</span><br><span class="line">  .option(</span><br><span class="line">  <span class="string">&quot;url&quot;</span>,</span><br><span class="line">  <span class="string">&quot;jdbc:mysql://localhost:3306/test?createDatabaseIfNotExist=true&amp;serverTimezone=UTC&amp;useSSL=true&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;driver&quot;</span>, <span class="string">&quot;com.mysql.cj.jdbc.Driver&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;query&quot;</span>, <span class="string">&quot;select * from user&quot;</span>)</span><br><span class="line">  .load().createOrReplaceTempView(<span class="string">&quot;t1&quot;</span>);</span><br><span class="line">spark.sql(<span class="string">&quot;select * from t1 where birthday &gt;= $&#123;startTime&#125; and birthday &lt; $&#123;endTime&#125;&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>Spark SQL这种set params的方式，盲猜应该也是直接替换字符串的方式。</p>
+<p>至于这两种方式孰优孰劣，个人觉得还是得测试一下性能才能确定，虽说看上去Spark SQL的方式更加通用一下，但是缺点还是需要获取到全表数据，一旦数据量很大，会很影响性能的，也会丧失数据库本身索引的优势。</p>
+<p>当然这只是自己的一厢情愿，其实我还没具体测试过。。。</p>
+<h2 id="Q2-dbtable和query到底有什么区别"><a href="#Q2-dbtable和query到底有什么区别" class="headerlink" title="Q2: dbtable和query到底有什么区别"></a>Q2: dbtable和query到底有什么区别</h2><p>根据官方文档上的说明，dbtable和query不能同时使用。</p>
+<p>dbtable可以填写表名，也可以是一个sql语句作为子查询。</p>
+<p>query可以填写sql语句，但不可以填写表名。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">option(<span class="string">&quot;dbtable&quot;</span>, <span class="string">&quot;user&quot;</span>); <span class="comment">// 正确示例</span></span><br><span class="line">option(<span class="string">&quot;dbtable&quot;</span>, <span class="string">&quot;(select * from user) as subQuery&quot;</span>); <span class="comment">// 正确示例</span></span><br><span class="line">option(<span class="string">&quot;dbtable&quot;</span>, <span class="string">&quot;select * from user&quot;</span>); <span class="comment">// 这个是错误案例</span></span><br><span class="line"></span><br><span class="line">option(<span class="string">&quot;query&quot;</span>, <span class="string">&quot;select * from user&quot;</span>); <span class="comment">// 正确示例</span></span><br><span class="line">option(<span class="string">&quot;query&quot;</span>, <span class="string">&quot;user&quot;</span>); <span class="comment">// 错误示例</span></span><br><span class="line">option(<span class="string">&quot;query&quot;</span>, <span class="string">&quot;(select * from user) as subQuery&quot;</span>); <span class="comment">// 错误示例</span></span><br></pre></td></tr></table></figure>
+
+<p>看正反示例代码也可以发现，dbtable和query是冲突的，所以不能同时使用。</p>
+<p>再来看看源代码，也能充分说明dbtable和query的区别</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 摘录自org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions</span></span><br><span class="line"><span class="keyword">val</span> tableOrQuery = (parameters.get(<span class="type">JDBC_TABLE_NAME</span>), parameters.get(<span class="type">JDBC_QUERY_STRING</span>)) <span class="keyword">match</span> &#123;</span><br><span class="line">    <span class="comment">// 这里判断了dbtable和query是不是都存在，如果都存在，抛出异常</span></span><br><span class="line">    <span class="keyword">case</span> (<span class="type">Some</span>(name), <span class="type">Some</span>(subquery)) =&gt;</span><br><span class="line">      <span class="keyword">throw</span> <span class="type">QueryExecutionErrors</span>.cannotSpecifyBothJdbcTableNameAndQueryError(</span><br><span class="line">        <span class="type">JDBC_TABLE_NAME</span>, <span class="type">JDBC_QUERY_STRING</span>)</span><br><span class="line">    <span class="comment">// 这里判断了dbtable和query是不是都不存在，如果都不存在，抛出异常</span></span><br><span class="line">    <span class="keyword">case</span> (<span class="type">None</span>, <span class="type">None</span>) =&gt;</span><br><span class="line">      <span class="keyword">throw</span> <span class="type">QueryExecutionErrors</span>.missingJdbcTableNameAndQueryError(</span><br><span class="line">        <span class="type">JDBC_TABLE_NAME</span>, <span class="type">JDBC_QUERY_STRING</span>)</span><br><span class="line">    <span class="comment">// 如果只有dbtable并且不为空直接返回</span></span><br><span class="line">    <span class="keyword">case</span> (<span class="type">Some</span>(name), <span class="type">None</span>) =&gt;</span><br><span class="line">      <span class="keyword">if</span> (name.isEmpty) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="type">QueryExecutionErrors</span>.emptyOptionError(<span class="type">JDBC_TABLE_NAME</span>)</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        name.trim</span><br><span class="line">      &#125;</span><br><span class="line">    <span class="comment">// 如果是query，则需要做一层拼接，(subquery) SPARK_GEN_SUBQ_id</span></span><br><span class="line">    <span class="keyword">case</span> (<span class="type">None</span>, <span class="type">Some</span>(subquery)) =&gt;</span><br><span class="line">      <span class="keyword">if</span> (subquery.isEmpty) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="type">QueryExecutionErrors</span>.emptyOptionError(<span class="type">JDBC_QUERY_STRING</span>)</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="string">s&quot;(<span class="subst">$&#123;subquery&#125;</span>) SPARK_GEN_SUBQ_<span class="subst">$&#123;curId.getAndIncrement()&#125;</span>&quot;</span></span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用tableOrQuery的地方，org.apache.spark.sql.execution.datasources.jdbc.JDBCRDD#compute</span></span><br><span class="line"><span class="comment">// select * from dbtable</span></span><br><span class="line"><span class="comment">// SELECT * FROM (subquery) SPARK_GEN_SUBQ_id </span></span><br><span class="line"><span class="keyword">val</span> sqlText = <span class="string">s&quot;SELECT <span class="subst">$columnList</span> FROM <span class="subst">$&#123;options.tableOrQuery&#125;</span> <span class="subst">$myWhereClause</span>&quot;</span> +</span><br><span class="line">      <span class="string">s&quot; <span class="subst">$getGroupByClause</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>除了配置上的区别，还有一个区别就是如果指定了partitionColumn，lowerBound，upperBound，则必须使用dbtable，不能使用query。这一点在官方文档里有说明，源代码里也有体现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 摘录自 org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions</span></span><br><span class="line">require(!(parameters.get(JDBC_QUERY_STRING).isDefined &amp;&amp; partitionColumn.isDefined),</span><br><span class="line">  s<span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">     |Options &#x27;$JDBC_QUERY_STRING&#x27; and &#x27;$JDBC_PARTITION_COLUMN&#x27; can not be specified together.</span></span><br><span class="line"><span class="string">     |Please define the query using `$JDBC_TABLE_NAME` option instead and make sure to qualify</span></span><br><span class="line"><span class="string">     |the partition columns using the supplied subquery alias to resolve any ambiguity.</span></span><br><span class="line"><span class="string">     |Example :</span></span><br><span class="line"><span class="string">     |spark.read.format(&quot;jdbc&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;url&quot;, jdbcUrl)</span></span><br><span class="line"><span class="string">     |  .option(&quot;dbtable&quot;, &quot;(select c1, c2 from t1) as subq&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;partitionColumn&quot;, &quot;c1&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;lowerBound&quot;, &quot;1&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;upperBound&quot;, &quot;100&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;numPartitions&quot;, &quot;3&quot;)</span></span><br><span class="line"><span class="string">     |  .load()</span></span><br><span class="line"><span class="string">   &quot;&quot;&quot;</span>.stripMargin</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>所以如果指定了partitionColumn就必须使用dbtable。</p>
+<h2 id="Q3-numPartitions-partitionColumn-lowerBound-upperBound四个参数之间的关系到底是什么？"><a href="#Q3-numPartitions-partitionColumn-lowerBound-upperBound四个参数之间的关系到底是什么？" class="headerlink" title="Q3: numPartitions, partitionColumn, lowerBound, upperBound四个参数之间的关系到底是什么？"></a>Q3: numPartitions, partitionColumn, lowerBound, upperBound四个参数之间的关系到底是什么？</h2><ol>
+<li><code>numPartitions</code>：读、写的<strong>最大</strong>分区数，也决定了开启数据库连接的数目。注意<strong>最大</strong>两个字，也就是说你指定了32个分区，它也不一定就真的分32个分区了。比如：在读的时候，即便指定了<code>numPartitions</code>为任何大于1的值，如果没有指定分区规则，就只有一个<code>task</code>去执行查询。</li>
+<li><code>partitionColumn, lowerBound, upperBound</code>：指定读数据时的分区规则。要使用这三个参数，必须定义<code>numPartitions</code>，而且这三个参数不能单独出现，要用就必须全部指定。而且<code>lowerBound, upperBound</code>不是过滤条件，只是用于决定分区跨度。</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">spark</span><br><span class="line">  .read()</span><br><span class="line">  .format(<span class="string">&quot;jdbc&quot;</span>)</span><br><span class="line">  .option(</span><br><span class="line">  <span class="string">&quot;url&quot;</span>,</span><br><span class="line">  <span class="string">&quot;jdbc:mysql://localhost:3306/test?createDatabaseIfNotExist=true&amp;serverTimezone=UTC&amp;useSSL=true&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;driver&quot;</span>, <span class="string">&quot;com.mysql.cj.jdbc.Driver&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;dbtable&quot;</span>, <span class="string">&quot;(select * from user) as subQuery&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;numPartitions&quot;</span>, <span class="string">&quot;10&quot;</span>)</span><br><span class="line">  .load().rdd().getNumPartitions(); <span class="comment">// 结果为1</span></span><br><span class="line"></span><br><span class="line">spark</span><br><span class="line">  .read()</span><br><span class="line">  .format(<span class="string">&quot;jdbc&quot;</span>)</span><br><span class="line">  .option(</span><br><span class="line">  <span class="string">&quot;url&quot;</span>,</span><br><span class="line">  <span class="string">&quot;jdbc:mysql://localhost:3306/test?createDatabaseIfNotExist=true&amp;serverTimezone=UTC&amp;useSSL=true&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;root&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;driver&quot;</span>, <span class="string">&quot;com.mysql.cj.jdbc.Driver&quot;</span>)</span><br><span class="line">  <span class="comment">//            .option(&quot;query&quot;, &quot;select * from user&quot;)</span></span><br><span class="line">  .option(<span class="string">&quot;dbtable&quot;</span>, <span class="string">&quot;(select * from user) as subQuery&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;partitionColumn&quot;</span>, <span class="string">&quot;id&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;lowerBound&quot;</span>, <span class="string">&quot;1&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;upperBound&quot;</span>, <span class="string">&quot;50&quot;</span>)</span><br><span class="line">  .option(<span class="string">&quot;numPartitions&quot;</span>, <span class="string">&quot;10&quot;</span>)</span><br><span class="line">  .load().rdd().getNumPartitions(); <span class="comment">// 结果为10</span></span><br></pre></td></tr></table></figure>
+
+<p>对于<code>numPartitions</code>的使用有我感到疑惑的地方，官方文档也没有说明的很清楚，如果说指定了<code>numPartitions</code>但是不指定分区规则，这个参数相当于没用，如果需要指定分区规则就需要用到<code>partitionColumn, lowerBound, upperBound</code>这三个字段，官网在介绍<code>numPartitions</code>并没有说明一定要这三个字段才生效，不知道有没有懂哥知道其他指定分区的方法。</p>
+<p>所以我扒了一下源码，浅析了一下。首先先看看JDBCOptions里的描述</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 这里就表明了partitionColumn，lowerBound，upperBound，numPartitions必须都要存在，分区才能生效</span></span><br><span class="line">require((partitionColumn.isEmpty &amp;&amp; lowerBound.isEmpty &amp;&amp; upperBound.isEmpty) ||</span><br><span class="line">  (partitionColumn.isDefined &amp;&amp; lowerBound.isDefined &amp;&amp; upperBound.isDefined &amp;&amp;</span><br><span class="line">    numPartitions.isDefined),</span><br><span class="line">  <span class="string">s&quot;When reading JDBC data sources, users need to specify all or none for the following &quot;</span> +</span><br><span class="line">    <span class="string">s&quot;options: &#x27;<span class="subst">$JDBC_PARTITION_COLUMN</span>&#x27;, &#x27;<span class="subst">$JDBC_LOWER_BOUND</span>&#x27;, &#x27;<span class="subst">$JDBC_UPPER_BOUND</span>&#x27;, &quot;</span> +</span><br><span class="line">    <span class="string">s&quot;and &#x27;<span class="subst">$JDBC_NUM_PARTITIONS</span>&#x27;&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>具体使用的逻辑在<code>org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation#columnPartition</code></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">columnPartition</span></span>(</span><br><span class="line">    schema: <span class="type">StructType</span>,</span><br><span class="line">    resolver: <span class="type">Resolver</span>,</span><br><span class="line">    timeZoneId: <span class="type">String</span>,</span><br><span class="line">    jdbcOptions: <span class="type">JDBCOptions</span>): <span class="type">Array</span>[<span class="type">Partition</span>] = &#123;</span><br><span class="line">  <span class="keyword">val</span> partitioning = &#123;</span><br><span class="line">    <span class="keyword">import</span> <span class="type">JDBCOptions</span>._</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> partitionColumn = jdbcOptions.partitionColumn</span><br><span class="line">    <span class="keyword">val</span> lowerBound = jdbcOptions.lowerBound</span><br><span class="line">    <span class="keyword">val</span> upperBound = jdbcOptions.upperBound</span><br><span class="line">    <span class="keyword">val</span> numPartitions = jdbcOptions.numPartitions</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 如果partitionColumn没有指定，直接返回null</span></span><br><span class="line">    <span class="keyword">if</span> (partitionColumn.isEmpty) &#123;</span><br><span class="line">      assert(lowerBound.isEmpty &amp;&amp; upperBound.isEmpty, <span class="string">&quot;When &#x27;partitionColumn&#x27; is not &quot;</span> +</span><br><span class="line">        <span class="string">s&quot;specified, &#x27;<span class="subst">$JDBC_LOWER_BOUND</span>&#x27; and &#x27;<span class="subst">$JDBC_UPPER_BOUND</span>&#x27; are expected to be empty&quot;</span>)</span><br><span class="line">      <span class="literal">null</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// 如果partitionColumn指定了，lowerBound，upperBound，numPartitions也必须指定</span></span><br><span class="line">      assert(lowerBound.nonEmpty &amp;&amp; upperBound.nonEmpty &amp;&amp; numPartitions.nonEmpty,</span><br><span class="line">        <span class="string">s&quot;When &#x27;partitionColumn&#x27; is specified, &#x27;<span class="subst">$JDBC_LOWER_BOUND</span>&#x27;, &#x27;<span class="subst">$JDBC_UPPER_BOUND</span>&#x27;, and &quot;</span> +</span><br><span class="line">          <span class="string">s&quot;&#x27;<span class="subst">$JDBC_NUM_PARTITIONS</span>&#x27; are also required&quot;</span>)</span><br><span class="line"></span><br><span class="line">      <span class="comment">// verifyAndGetNormalizedPartitionColumn会判断 column存不存在以及类型是否满足Numeric,Date,Timestamp</span></span><br><span class="line">      <span class="keyword">val</span> (column, columnType) = verifyAndGetNormalizedPartitionColumn(</span><br><span class="line">        schema, partitionColumn.get, resolver, jdbcOptions)</span><br><span class="line">			<span class="comment">// toInternalBoundValue 会做数据转换</span></span><br><span class="line">      <span class="keyword">val</span> lowerBoundValue = toInternalBoundValue(lowerBound.get, columnType, timeZoneId)</span><br><span class="line">      <span class="keyword">val</span> upperBoundValue = toInternalBoundValue(upperBound.get, columnType, timeZoneId)</span><br><span class="line">      <span class="type">JDBCPartitioningInfo</span>(</span><br><span class="line">        column, columnType, lowerBoundValue, upperBoundValue, numPartitions.get)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 如果partitioning为null或者numPartitions&lt;=1或者lowerBound==upperBound，表明不需要分区。</span></span><br><span class="line">  <span class="comment">// 这里也就表明了如果partitionColumn不指定，即使指定了numPartitions也是无用的。不知道这算不算官网文档的一个bug？</span></span><br><span class="line">  <span class="keyword">if</span> (partitioning == <span class="literal">null</span> || partitioning.numPartitions &lt;= <span class="number">1</span> ||</span><br><span class="line">    partitioning.lowerBound == partitioning.upperBound) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="type">Array</span>[<span class="type">Partition</span>](<span class="type">JDBCPartition</span>(<span class="literal">null</span>, <span class="number">0</span>))</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">val</span> lowerBound = partitioning.lowerBound</span><br><span class="line">  <span class="keyword">val</span> upperBound = partitioning.upperBound</span><br><span class="line">  require (lowerBound &lt;= upperBound,</span><br><span class="line">    <span class="string">&quot;Operation not allowed: the lower bound of partitioning column is larger than the upper &quot;</span> +</span><br><span class="line">    <span class="string">s&quot;bound. Lower bound: <span class="subst">$lowerBound</span>; Upper bound: <span class="subst">$upperBound</span>&quot;</span>)</span><br><span class="line"></span><br><span class="line">  <span class="keyword">val</span> boundValueToString: <span class="type">Long</span> =&gt; <span class="type">String</span> =</span><br><span class="line">    toBoundValueInWhereClause(_, partitioning.columnType, timeZoneId)</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// 从这里可以看出upperBound-lowerBound &lt; numPartitions，那么区数其实是upperBound-lowerBound</span></span><br><span class="line">  <span class="keyword">val</span> numPartitions =</span><br><span class="line">    <span class="keyword">if</span> ((upperBound - lowerBound) &gt;= partitioning.numPartitions || <span class="comment">/* check for overflow */</span></span><br><span class="line">        (upperBound - lowerBound) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">      partitioning.numPartitions</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// 省略一些代码</span></span><br><span class="line">      upperBound - lowerBound</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">val</span> upperStride = (upperBound / <span class="type">BigDecimal</span>(numPartitions))</span><br><span class="line">    .setScale(<span class="number">18</span>, <span class="type">RoundingMode</span>.<span class="type">HALF_EVEN</span>)</span><br><span class="line">  <span class="keyword">val</span> lowerStride = (lowerBound / <span class="type">BigDecimal</span>(numPartitions))</span><br><span class="line">    .setScale(<span class="number">18</span>, <span class="type">RoundingMode</span>.<span class="type">HALF_EVEN</span>)</span><br><span class="line"></span><br><span class="line">  <span class="keyword">val</span> preciseStride = upperStride - lowerStride</span><br><span class="line">  <span class="comment">// 分区跨度</span></span><br><span class="line">  <span class="keyword">val</span> stride = preciseStride.toLong</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">val</span> lostNumOfStrides = (preciseStride - stride) * numPartitions / stride</span><br><span class="line">  <span class="keyword">val</span> lowerBoundWithStrideAlignment = lowerBound +</span><br><span class="line">    ((lostNumOfStrides / <span class="number">2</span>) * stride).setScale(<span class="number">0</span>, <span class="type">RoundingMode</span>.<span class="type">HALF_UP</span>).toLong</span><br><span class="line"></span><br><span class="line">  <span class="keyword">var</span> i: <span class="type">Int</span> = <span class="number">0</span></span><br><span class="line">  <span class="keyword">val</span> column = partitioning.column</span><br><span class="line">  <span class="keyword">var</span> currentValue = lowerBoundWithStrideAlignment</span><br><span class="line">  <span class="comment">// 用于存储分区where条件</span></span><br><span class="line">  <span class="keyword">val</span> ans = <span class="keyword">new</span> <span class="type">ArrayBuffer</span>[<span class="type">Partition</span>]()</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// 开始构建分区sql where条件</span></span><br><span class="line">  <span class="keyword">while</span> (i &lt; numPartitions) &#123;</span><br><span class="line">    <span class="keyword">val</span> lBoundValue = boundValueToString(currentValue)</span><br><span class="line">    <span class="comment">// 构造分区下界条件语句，若是第一个分区(partition0)，下界条件为null</span></span><br><span class="line">    <span class="keyword">val</span> lBound = <span class="keyword">if</span> (i != <span class="number">0</span>) <span class="string">s&quot;<span class="subst">$column</span> &gt;= <span class="subst">$lBoundValue</span>&quot;</span> <span class="keyword">else</span> <span class="literal">null</span></span><br><span class="line">    currentValue += stride</span><br><span class="line">    <span class="keyword">val</span> uBoundValue = boundValueToString(currentValue)</span><br><span class="line">    <span class="comment">// 构造分区上界条件语句，若是最后一个分区，上界条件为null</span></span><br><span class="line">    <span class="keyword">val</span> uBound = <span class="keyword">if</span> (i != numPartitions - <span class="number">1</span>) <span class="string">s&quot;<span class="subst">$column</span> &lt; <span class="subst">$uBoundValue</span>&quot;</span> <span class="keyword">else</span> <span class="literal">null</span></span><br><span class="line">    <span class="keyword">val</span> whereClause =</span><br><span class="line">      <span class="keyword">if</span> (uBound == <span class="literal">null</span>) &#123;</span><br><span class="line">        lBound</span><br><span class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (lBound == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="string">s&quot;<span class="subst">$uBound</span> or <span class="subst">$column</span> is null&quot;</span></span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="string">s&quot;<span class="subst">$lBound</span> AND <span class="subst">$uBound</span>&quot;</span></span><br><span class="line">      &#125;</span><br><span class="line">    ans += <span class="type">JDBCPartition</span>(whereClause, i)</span><br><span class="line">    i = i + <span class="number">1</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">val</span> partitions = ans.toArray</span><br><span class="line">  logInfo(<span class="string">s&quot;Number of partitions: <span class="subst">$numPartitions</span>, WHERE clauses of these partitions: &quot;</span> +</span><br><span class="line">    partitions.map(_.asInstanceOf[<span class="type">JDBCPartition</span>].whereClause).mkString(<span class="string">&quot;, &quot;</span>))</span><br><span class="line">  partitions</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>小总结一下，实际上<code>numPartitions, partitionColumn, lowerBound, upperBound</code>这四个参数，如果设置了，则4个都需要设置，如果只设置了<code>numPartitions</code>是无效的，原因源码里有说明。</p>
+<p>那如果dbtable里并没有满足可以分区的字段，比如都是String类型的字段，那该如何分区呢？其实，当时刚看到<code>numPartitions</code>我的第一想法是如果没有指定<code>partitionColumn</code>，Spark会根据数据库分页的方式来做分区，虽说最后调研的结果看起来是我想多了，但这确实也给我这个问题的答案提供了思路，大致思路如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 需要先执行select count(*) from &lt;dbtable&gt;</span></span><br><span class="line"><span class="type">int</span> <span class="variable">count</span> <span class="operator">=</span> <span class="number">1000</span>;</span><br><span class="line"><span class="type">int</span> <span class="variable">numPartitions</span> <span class="operator">=</span> <span class="number">10</span>;</span><br><span class="line"><span class="type">int</span> <span class="variable">stride</span> <span class="operator">=</span> count / numPartitions;</span><br><span class="line"><span class="type">SparkSession</span> <span class="variable">spark</span> <span class="operator">=</span></span><br><span class="line">  SparkSession.builder().appName(<span class="string">&quot;local-test&quot;</span>).master(<span class="string">&quot;local[2]&quot;</span>).getOrCreate();</span><br><span class="line">String[] predicates = <span class="keyword">new</span> <span class="title class_">String</span>[numPartitions];</span><br><span class="line"><span class="comment">// 拼接where条件，这里除了分页，也可以是其他可以分区的条件。</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; numPartitions; i++) &#123;</span><br><span class="line">  predicates[i] = String.format(<span class="string">&quot;1 = 1 limit %d, %d&quot;</span>, i * stride, stride);</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">Properties</span> <span class="variable">properties</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Properties</span>();</span><br><span class="line">properties.put(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;root&quot;</span>);</span><br><span class="line">properties.put(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;root&quot;</span>);</span><br><span class="line">properties.put(<span class="string">&quot;driver&quot;</span>, <span class="string">&quot;com.mysql.cj.jdbc.Driver&quot;</span>);</span><br><span class="line">Dataset&lt;Row&gt; df =</span><br><span class="line">  spark</span><br><span class="line">  .read()</span><br><span class="line">  .jdbc(</span><br><span class="line">  <span class="string">&quot;jdbc:mysql://localhost:3306/test?createDatabaseIfNotExist=true&amp;serverTimezone=UTC&amp;useSSL=true&quot;</span>,</span><br><span class="line">  <span class="string">&quot;user&quot;</span>,</span><br><span class="line">  predicates,</span><br><span class="line">  properties);</span><br><span class="line">System.out.println(df.rdd().getNumPartitions()); <span class="comment">// 10</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="Q4-Spark-SQL对于jdbc-write方法很暴力，竟然会改变表的结构？"><a href="#Q4-Spark-SQL对于jdbc-write方法很暴力，竟然会改变表的结构？" class="headerlink" title="Q4: Spark SQL对于jdbc write方法很暴力，竟然会改变表的结构？"></a>Q4: Spark SQL对于jdbc write方法很暴力，竟然会改变表的结构？</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">testJDBCWriter</span><span class="params">()</span> &#123;</span><br><span class="line">  <span class="type">SparkSession</span> <span class="variable">spark</span> <span class="operator">=</span></span><br><span class="line">    SparkSession.builder().appName(<span class="string">&quot;local-test&quot;</span>).master(<span class="string">&quot;local[2]&quot;</span>).getOrCreate();</span><br><span class="line">  <span class="type">StructType</span> <span class="variable">structType</span> <span class="operator">=</span></span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">StructType</span>(</span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">StructField</span>[] &#123;</span><br><span class="line">      <span class="keyword">new</span> <span class="title class_">StructField</span>(<span class="string">&quot;id&quot;</span>, DataTypes.IntegerType, <span class="literal">false</span>, Metadata.empty()),</span><br><span class="line">      <span class="keyword">new</span> <span class="title class_">StructField</span>(<span class="string">&quot;name&quot;</span>, DataTypes.StringType, <span class="literal">false</span>, Metadata.empty()),</span><br><span class="line">      <span class="keyword">new</span> <span class="title class_">StructField</span>(<span class="string">&quot;createTime&quot;</span>, DataTypes.TimestampType, <span class="literal">false</span>, Metadata.empty())</span><br><span class="line">    &#125;);</span><br><span class="line">  Dataset&lt;Row&gt; df =</span><br><span class="line">    spark</span><br><span class="line">    .read()</span><br><span class="line">    .option(<span class="string">&quot;header&quot;</span>, <span class="string">&quot;true&quot;</span>)</span><br><span class="line">    .schema(structType)</span><br><span class="line">    .format(<span class="string">&quot;csv&quot;</span>)</span><br><span class="line">    .load(SparkSQLDataSourceDemo.class.getClassLoader().getResource(<span class="string">&quot;user.csv&quot;</span>).getPath());</span><br><span class="line">  <span class="type">Properties</span> <span class="variable">properties</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Properties</span>();</span><br><span class="line">  properties.put(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;root&quot;</span>);</span><br><span class="line">  properties.put(<span class="string">&quot;password&quot;</span>, <span class="string">&quot;root&quot;</span>);</span><br><span class="line">  properties.put(<span class="string">&quot;driver&quot;</span>, <span class="string">&quot;com.mysql.cj.jdbc.Driver&quot;</span>);</span><br><span class="line">  df.write()</span><br><span class="line">    .jdbc(</span><br><span class="line">    <span class="string">&quot;jdbc:mysql://localhost:3306/test?createDatabaseIfNotExist=true&amp;serverTimezone=UTC&amp;useSSL=true&quot;</span>,</span><br><span class="line">    <span class="string">&quot;user&quot;</span>,</span><br><span class="line">    properties);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果user表没有创建，dataframe jdbc write就会自己根据schema和表名自己在jdbc里创建表。</p>
+<p>如果user表已经存在，默认的<code>SaveMode.ErrorIfExists</code>如果表已经存在，会报<code>Table or view &#39;user&#39; already exists.</code>的错误。</p>
+<p>如果user表已经存在，<code>SaveMode</code>选择<code>Append</code>，则会追加到表里，但是如果配置了主键或者唯一约束，相同的数据会报错。</p>
+<p>如果user表已经存在，<code>SaveMode</code>选择<code>Overwrite</code>，并且<code>truncate</code>为<code>false</code>。会先删除表再重建表，会改变原先表结构，例如原表的表结构里有主键，索引，或者某字段类型（比如varchar），经过先删除表再重建表的操作，原来的主键，索引已经没有了，字段的类型也被改变了（比如varchar变成了text）。</p>
+<p>源代码如下：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 摘录自：org.apache.spark.sql.execution.datasources.jdbc.JdbcRelationProvider</span></span><br><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">createRelation</span></span>(</span><br><span class="line">      sqlContext: <span class="type">SQLContext</span>,</span><br><span class="line">      mode: <span class="type">SaveMode</span>,</span><br><span class="line">      parameters: <span class="type">Map</span>[<span class="type">String</span>, <span class="type">String</span>],</span><br><span class="line">      df: <span class="type">DataFrame</span>): <span class="type">BaseRelation</span> = &#123;</span><br><span class="line">    <span class="keyword">val</span> options = <span class="keyword">new</span> <span class="type">JdbcOptionsInWrite</span>(parameters)</span><br><span class="line">    <span class="keyword">val</span> isCaseSensitive = sqlContext.conf.caseSensitiveAnalysis</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> conn = <span class="type">JdbcUtils</span>.createConnectionFactory(options)()</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">val</span> tableExists = <span class="type">JdbcUtils</span>.tableExists(conn, options)</span><br><span class="line">      <span class="keyword">if</span> (tableExists) &#123;</span><br><span class="line">        mode <span class="keyword">match</span> &#123;</span><br><span class="line">          <span class="keyword">case</span> <span class="type">SaveMode</span>.<span class="type">Overwrite</span> =&gt;</span><br><span class="line">            <span class="keyword">if</span> (options.isTruncate &amp;&amp; isCascadingTruncateTable(options.url) == <span class="type">Some</span>(<span class="literal">false</span>)) &#123;</span><br><span class="line">              <span class="comment">// In this case, we should truncate table and then load.</span></span><br><span class="line">              truncateTable(conn, options)</span><br><span class="line">              <span class="keyword">val</span> tableSchema = <span class="type">JdbcUtils</span>.getSchemaOption(conn, options)</span><br><span class="line">              saveTable(df, tableSchema, isCaseSensitive, options)</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              <span class="comment">// Otherwise, do not truncate the table, instead drop and recreate it</span></span><br><span class="line">              dropTable(conn, options.table, options)</span><br><span class="line">              createTable(conn, options.table, df.schema, isCaseSensitive, options)</span><br><span class="line">              saveTable(df, <span class="type">Some</span>(df.schema), isCaseSensitive, options)</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">          <span class="keyword">case</span> <span class="type">SaveMode</span>.<span class="type">Append</span> =&gt;</span><br><span class="line">            <span class="keyword">val</span> tableSchema = <span class="type">JdbcUtils</span>.getSchemaOption(conn, options)</span><br><span class="line">            saveTable(df, tableSchema, isCaseSensitive, options)</span><br><span class="line"></span><br><span class="line">          <span class="keyword">case</span> <span class="type">SaveMode</span>.<span class="type">ErrorIfExists</span> =&gt;</span><br><span class="line">            <span class="keyword">throw</span> <span class="type">QueryCompilationErrors</span>.tableOrViewAlreadyExistsError(options.table)</span><br><span class="line"></span><br><span class="line">          <span class="keyword">case</span> <span class="type">SaveMode</span>.<span class="type">Ignore</span> =&gt;</span><br><span class="line">            <span class="comment">// With `SaveMode.Ignore` mode, if table already exists, the save operation is expected</span></span><br><span class="line">            <span class="comment">// to not save the contents of the DataFrame and to not change the existing data.</span></span><br><span class="line">            <span class="comment">// Therefore, it is okay to do nothing here and then just return the relation below.</span></span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        createTable(conn, options.table, df.schema, isCaseSensitive, options)</span><br><span class="line">        saveTable(df, <span class="type">Some</span>(df.schema), isCaseSensitive, options)</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      conn.close()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    createRelation(sqlContext, parameters)</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>那如果我们想更好的实现Overwrite，那应该怎么实现呢？我的解决方案是使用<code>Dataframe.foreachPartition()</code>方法实现，实现思路如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">df.foreachPartition(</span><br><span class="line">        partition -&gt; &#123;</span><br><span class="line">          <span class="type">Connection</span> <span class="variable">connection</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">          <span class="type">PreparedStatement</span> <span class="variable">ps</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">          <span class="keyword">try</span> &#123;</span><br><span class="line">            Class.forName(driverClassName);</span><br><span class="line">            connection = DriverManager.getConnection(url, username, password);</span><br><span class="line">            <span class="comment">// sql可以根据是Append还是Overwrite来提供</span></span><br><span class="line">            ps = connection.prepareStatement(sql); <span class="comment">//（1）</span></span><br><span class="line">            connection.setAutoCommit(<span class="literal">false</span>);</span><br><span class="line">            connection.setTransactionIsolation(transactionLevel);</span><br><span class="line">            <span class="type">int</span> <span class="variable">count</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">while</span> (partition.hasNext()) &#123;</span><br><span class="line">              <span class="type">Row</span> <span class="variable">row</span> <span class="operator">=</span> partition.next();</span><br><span class="line">              <span class="comment">// 根据Column类型来setParamete。</span></span><br><span class="line">              setParameter(ps, row);</span><br><span class="line">              count++;</span><br><span class="line">              <span class="keyword">if</span> (count &lt; batchSize) &#123;</span><br><span class="line">                ps.addBatch();</span><br><span class="line">              &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                ps.executeBatch();</span><br><span class="line">                connection.commit();</span><br><span class="line">                count = <span class="number">0</span>;</span><br><span class="line">              &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (count != <span class="number">0</span>) &#123;</span><br><span class="line">              ps.executeBatch();</span><br><span class="line">              connection.commit();</span><br><span class="line">            &#125;</span><br><span class="line">          &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="keyword">if</span> (connection != <span class="literal">null</span>) &#123;</span><br><span class="line">              connection.rollback();</span><br><span class="line">            &#125;</span><br><span class="line">          &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (ps != <span class="literal">null</span>) &#123;</span><br><span class="line">              ps.close();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (connection != <span class="literal">null</span>) &#123;</span><br><span class="line">              connection.close();</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;);</span><br></pre></td></tr></table></figure>
+
+<p>对上述代码（1）处的说明如下：</p>
+<ol>
+<li><p>sql可以根据写入模式是Append还是Overwrite来生成</p>
+</li>
+<li><p>如果是Append，则可以提供insert语句</p>
+</li>
+<li><p>如果是Overwrite，如果是MySQL，可以提供Replace语句也可以提供insert on duplicate key update语句，但是其他的DBMS，需要看看有没有其他语句能够达成这样的功效。</p>
+</li>
+<li><p>对于第三点，是依赖主键或者其他唯一约束的，如果表里没有主键或者其他数据库没有类似MySQL那种insert on duplicate key update语句，也可以自定义唯一的条件语句，通过update来实现，如果update返回0，则执行insert。<code>PreparedStatement.executeUpdate()</code>会返回执行成功的条数，根据这个来判断即可。</p>
+</li>
+</ol>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本篇文章主要讲述了Spark SQL读写JDBC一些细节，通过一些案例来讲述，总结如下：</p>
+<ol>
+<li>Spark SQL读写JDBC，一些参数是必须的，例如<code>url, driver, user, password</code>。</li>
+<li>讨论了一下如何替换sql参数，避免sql注入。主要还是需要通过<code>PreparedStatement.setXXX</code>方式实现，缺点就是<code>PreparedStatement.toString()</code>方法依赖各个驱动包的实现。也可以通过Spark SQL set语法实现，但主要问题是这么做就需要全表查询，封装成DataFrame再操作，如果数据量很大，会很消耗内存，如果能够利用数据库查询语句，不仅能够过滤出符合条件的数据，也能利用数据库索引的优势提高查询效率。虽说这是我一厢情愿的想法，还有待验证。</li>
+<li>dbtable和query的区别就是dbtable可以填写表名例如user，也可以是一个sql语句作为子查询，例如(select * from user) as tmp，query仅能填写填写sql语句，例如select * from user。如果配置了partitionColumn，那就只能使用dbtable。</li>
+<li><code>numPartitions, partitionColumn, lowerBound, upperBound</code>这四个参数，如果设置了，则4个都需要设置，如果只设置了<code>numPartitions</code>是无效的。</li>
+<li>如果只想指定<code>numPartitions</code>，又想分区，怎么办？可以调用<code>spark.read().jdbc(&quot;url&quot;, &quot;tablename&quot;,predicates,properties)</code>方法，自己实现一个作为分区的predicates即可。</li>
+<li>对于write jdbc而言，原生spark sql的方式还是比较暴力，且不安全，如果不指定truncate，则会删除表再重建，这样会改变原来的表结构。truncate还依赖各个数据库的行为，不一定所有数据库都支持truncate。</li>
+<li>个人觉得write jdbc的最佳实践还是通过<code>DataFrame.foreachPartition()</code>方法实现，不管写入模式是Append还是Overwrite，都可以自己控制逻辑。</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Spark/" rel="tag"># Spark</a>
+              <a href="/tags/SparkSQL/" rel="tag"># SparkSQL</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/09/29/kafka%E5%85%A5%E9%97%A8%E4%BB%8B%E7%BB%8D/" rel="prev" title="kafka入门介绍">
+      <i class="fa fa-chevron-left"></i> kafka入门介绍
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#SparkSQL%E8%AF%BB%E5%86%99JDBC"><span class="nav-number">1.</span> <span class="nav-text">SparkSQL读写JDBC</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Q-amp-A"><span class="nav-number">2.</span> <span class="nav-text">Q&amp;A</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Q1-%E5%93%AA%E4%B8%AA%E6%9F%A5%E8%AF%A2%E6%80%A7%E8%83%BD%E6%9B%B4%E5%A5%BD%EF%BC%9F"><span class="nav-number">2.1.</span> <span class="nav-text">Q1: 哪个查询性能更好？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Q2-dbtable%E5%92%8Cquery%E5%88%B0%E5%BA%95%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB"><span class="nav-number">2.2.</span> <span class="nav-text">Q2: dbtable和query到底有什么区别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Q3-numPartitions-partitionColumn-lowerBound-upperBound%E5%9B%9B%E4%B8%AA%E5%8F%82%E6%95%B0%E4%B9%8B%E9%97%B4%E7%9A%84%E5%85%B3%E7%B3%BB%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">2.3.</span> <span class="nav-text">Q3: numPartitions, partitionColumn, lowerBound, upperBound四个参数之间的关系到底是什么？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Q4-Spark-SQL%E5%AF%B9%E4%BA%8Ejdbc-write%E6%96%B9%E6%B3%95%E5%BE%88%E6%9A%B4%E5%8A%9B%EF%BC%8C%E7%AB%9F%E7%84%B6%E4%BC%9A%E6%94%B9%E5%8F%98%E8%A1%A8%E7%9A%84%E7%BB%93%E6%9E%84%EF%BC%9F"><span class="nav-number">2.4.</span> <span class="nav-text">Q4: Spark SQL对于jdbc write方法很暴力，竟然会改变表的结构？</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Shawn</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">2</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Shawn</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
