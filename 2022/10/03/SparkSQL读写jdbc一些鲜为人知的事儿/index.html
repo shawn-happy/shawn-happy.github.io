@@ -28,7 +28,7 @@
 <meta property="og:description" content="最近部门正在使用Spark做ETL，在使用JDBC作为DataSource的时候遇到了一些坑爹的问题，本文主要分享一下我遇到的问题和一些解决方案，当然可能会有更好的解决方案，还请各位大佬在评论区给点意见。另外，本文会涉及一些Spark的源码分析，我使用的版本是org.apache.spark:spark-sql_2.12:3.2.1 首先简单介绍一下Spark SQL读写JDBC的基本操作和参数配">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2022-10-03T06:53:51.000Z">
-<meta property="article:modified_time" content="2022-10-04T17:24:41.936Z">
+<meta property="article:modified_time" content="2022-10-04T17:34:40.410Z">
 <meta property="article:author" content="Shawn">
 <meta property="article:tag" content="Spark">
 <meta property="article:tag" content="SparkSQL">
@@ -182,7 +182,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-10-05 01:24:41" itemprop="dateModified" datetime="2022-10-05T01:24:41+08:00">2022-10-05</time>
+                <time title="Modified: 2022-10-05 01:34:40" itemprop="dateModified" datetime="2022-10-05T01:34:40+08:00">2022-10-05</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -335,7 +335,7 @@
 <p>除了配置上的区别，还有一个区别就是如果指定了partitionColumn，lowerBound，upperBound，则必须使用dbtable，不能使用query。这一点在官方文档里有说明，源代码里也有体现。</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 摘录自 org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions</span></span><br><span class="line">require(!(parameters.get(JDBC_QUERY_STRING).isDefined &amp;&amp; partitionColumn.isDefined),</span><br><span class="line">  s<span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">     |Options &#x27;$JDBC_QUERY_STRING&#x27; and &#x27;$JDBC_PARTITION_COLUMN&#x27; can not be specified together.</span></span><br><span class="line"><span class="string">     |Please define the query using `$JDBC_TABLE_NAME` option instead and make sure to qualify</span></span><br><span class="line"><span class="string">     |the partition columns using the supplied subquery alias to resolve any ambiguity.</span></span><br><span class="line"><span class="string">     |Example :</span></span><br><span class="line"><span class="string">     |spark.read.format(&quot;jdbc&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;url&quot;, jdbcUrl)</span></span><br><span class="line"><span class="string">     |  .option(&quot;dbtable&quot;, &quot;(select c1, c2 from t1) as subq&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;partitionColumn&quot;, &quot;c1&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;lowerBound&quot;, &quot;1&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;upperBound&quot;, &quot;100&quot;)</span></span><br><span class="line"><span class="string">     |  .option(&quot;numPartitions&quot;, &quot;3&quot;)</span></span><br><span class="line"><span class="string">     |  .load()</span></span><br><span class="line"><span class="string">   &quot;&quot;&quot;</span>.stripMargin</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
 
-<p>所以如果指定了partitionColumn就必须使用dbtable。</p>
+<p>所以如果指定了partitionColumn就必须使用dbtable。不过，我没整明白，dbtable和query的实际作用一样，最后都是select语句，为啥partitionColumn就必须使用dbtable？不知道是不是spark对这一块是否还有其他用途，还需要再调研调研。</p>
 <h2 id="Q3-numPartitions-partitionColumn-lowerBound-upperBound四个参数之间的关系到底是什么？"><a href="#Q3-numPartitions-partitionColumn-lowerBound-upperBound四个参数之间的关系到底是什么？" class="headerlink" title="Q3: numPartitions, partitionColumn, lowerBound, upperBound四个参数之间的关系到底是什么？"></a>Q3: numPartitions, partitionColumn, lowerBound, upperBound四个参数之间的关系到底是什么？</h2><ol>
 <li><code>numPartitions</code>：读、写的<strong>最大</strong>分区数，也决定了开启数据库连接的数目。注意<strong>最大</strong>两个字，也就是说你指定了32个分区，它也不一定就真的分32个分区了。比如：在读的时候，即便指定了<code>numPartitions</code>为任何大于1的值，如果没有指定分区规则，就只有一个<code>task</code>去执行查询。</li>
 <li><code>partitionColumn, lowerBound, upperBound</code>：指定读数据时的分区规则。要使用这三个参数，必须定义<code>numPartitions</code>，而且这三个参数不能单独出现，要用就必须全部指定。而且<code>lowerBound, upperBound</code>不是过滤条件，只是用于决定分区跨度。</li>
