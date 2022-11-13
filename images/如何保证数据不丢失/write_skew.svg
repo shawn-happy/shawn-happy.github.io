@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" viewBox="79 212 694 304" width="694" height="304">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledDiamond_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 4 -3 L 0 0 L 4 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledDiamond_Marker_2" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-9 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M -8 0 L -4 3 L 0 0 L -4 -3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <font-face font-family="PingFang SC" font-size="16" panose-1="2 11 4 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-150" underline-thickness="58" slope="0" x-height="600" cap-height="860" ascent="1060.0021" descent="-340.0007" font-weight="400">
+      <font-face-src>
+        <font-face-name name="PingFangSC-Regular"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Helvetica Neue" font-size="16" panose-1="2 0 5 3 0 0 0 2 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="951.9958" descent="-212.99744" font-weight="400">
+      <font-face-src>
+        <font-face-name name="HelveticaNeue"/>
+      </font-face-src>
+    </font-face>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="StickArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-7 -4 8 8" markerWidth="8" markerHeight="8" color="#666a6b">
+      <g>
+        <path d="M -5.76 0 L 0 0 M 0 2.16 L -5.76 0 L 0 -2.16" fill="none" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <font-face font-family="Helvetica Neue" font-size="13" panose-1="2 0 5 3 0 0 0 2 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="951.9958" descent="-212.99744" font-weight="400">
+      <font-face-src>
+        <font-face-name name="HelveticaNeue"/>
+      </font-face-src>
+    </font-face>
+    <font-face font-family="Helvetica Neue" font-size="12" panose-1="2 0 5 3 0 0 0 2 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="951.9958" descent="-212.99744" font-weight="400">
+      <font-face-src>
+        <font-face-name name="HelveticaNeue"/>
+      </font-face-src>
+    </font-face>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.19.4\n2022-11-13 09:46:46 +0000</metadata>
+  <g id="Canvas_1" stroke-opacity="1" stroke-dasharray="none" fill="none" fill-opacity="1" stroke="none">
+    <title>Canvas 1</title>
+    <rect fill="white" x="79" y="212" width="694" height="304"/>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Line_25">
+        <line x1="214.45" y1="275.4472" x2="762.75" y2="275.00742" marker-end="url(#FilledDiamond_Marker)" marker-start="url(#FilledDiamond_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_26">
+        <line x1="210.24997" y1="383.36353" x2="758.55" y2="381.9125" marker-end="url(#FilledDiamond_Marker)" marker-start="url(#FilledDiamond_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_27">
+        <line x1="214.44998" y1="499.9832" x2="745.75" y2="499.0168" marker-end="url(#FilledDiamond_Marker)" marker-start="url(#FilledDiamond_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_28">
+        <text transform="translate(97 264.5)" fill="black">
+          <tspan font-family="PingFang SC" font-size="16" font-weight="400" fill="black" x="36948222e-20" y="17">Transaction </tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" y="17">A</tspan>
+        </text>
+      </g>
+      <g id="Graphic_29">
+        <text transform="translate(97 371.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="0" y="15">Data System</tspan>
+        </text>
+      </g>
+      <g id="Graphic_30">
+        <text transform="translate(84.792 488.5)" fill="black">
+          <tspan font-family="PingFang SC" font-size="16" font-weight="400" fill="black" x="6394885e-19" y="17">Transaction </tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" y="17">B</tspan>
+        </text>
+      </g>
+      <g id="Line_32">
+        <title>Transition</title>
+        <line x1="228.27764" y1="368.4991" x2="229.99955" y2="275.4347" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_34">
+        <title>Transition</title>
+        <line x1="229.00048" y1="398.1339" x2="228.9981" y2="499.9567" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_37">
+        <title>Transition</title>
+        <line x1="310.1237" y1="397.919" x2="310.99056" y2="499.8076" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_40">
+        <title>Transition</title>
+        <line x1="311.8579" y1="368.2749" x2="310.9987" y2="275.36975" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_42">
+        <title>Transition</title>
+        <line x1="528.123" y1="397.3421" x2="528.9971" y2="499.41106" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_44">
+        <title>Transition</title>
+        <line x1="458.8661" y1="367.88586" x2="458.001" y2="275.25184" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Line_50">
+        <title>Transition</title>
+        <line x1="566.1387" y1="367.6027" x2="566.9969" y2="275.16442" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Graphic_51">
+        <rect x="532.47917" y="315.82632" width="68.045" height="25.363998" fill="white"/>
+        <text transform="translate(537.47916 320.8263)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="0" y="12">Commit A</tspan>
+        </text>
+      </g>
+      <g id="Graphic_55">
+        <rect x="388.67643" y="314.70837" width="139.623" height="25.363998" fill="white"/>
+        <text transform="translate(393.67643 319.70837)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="0" y="12">Update on_call = false</tspan>
+        </text>
+      </g>
+      <g id="Graphic_56">
+        <rect x="254.91325" y="315.18997" width="113.142" height="25.363998" fill="white"/>
+        <text transform="translate(259.91325 320.18997)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="0" y="12">Select on_call = 2</tspan>
+        </text>
+      </g>
+      <g id="Graphic_57">
+        <rect x="257.9047" y="431.00256" width="105.208" height="24.335999" fill="white"/>
+        <text transform="translate(262.9047 436.00256)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="12" font-weight="400" fill="black" x="0" y="11">Select on_call = 2</tspan>
+        </text>
+      </g>
+      <g id="Graphic_58">
+        <rect x="494.25386" y="430.6506" width="68.526" height="25.363998" fill="white"/>
+        <text transform="translate(499.25386 435.6506)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="831335e-18" y="12">Commit B</tspan>
+        </text>
+      </g>
+      <g id="Graphic_59">
+        <rect x="201.32179" y="312.89572" width="55.5" height="25.363998" fill="white"/>
+        <text transform="translate(206.32179 317.89572)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="35527137e-22" y="12">Begin A</tspan>
+        </text>
+      </g>
+      <g id="Graphic_61">
+        <rect x="201.00896" y="429.1695" width="55.981" height="25.363998" fill="white"/>
+        <text transform="translate(206.00896 434.1695)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="0" y="12">Begin B</tspan>
+        </text>
+      </g>
+      <g id="Line_65">
+        <title>Transition</title>
+        <line x1="429.00033" y1="397.6046" x2="429.00653" y2="499.59293" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-width="2"/>
+      </g>
+      <g id="Graphic_64">
+        <rect x="359.1916" y="430.22525" width="139.623" height="25.363998" fill="white"/>
+        <text transform="translate(364.1916 435.22525)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="0" y="12">Update on_call = false</tspan>
+        </text>
+      </g>
+      <g id="Graphic_69">
+        <text transform="translate(206.32178 217.74028)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="13" font-weight="400" fill="black" x="8668621e-19" y="12">Select count(1) from t where on_call = true</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

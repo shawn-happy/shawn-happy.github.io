@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="对于各种数据系统而言，保证数据不丢失，都是一个比较大的话题，我最近正在读《数据密集型应用系统设计》这本书，准备就保证数据不会丢失这个问题做一次总结，另外也会介绍一下各个数据系统对于如何保证数据不丢失的解决方案有哪些。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何保证数据不丢失">
+<meta property="og:url" content="http://example.com/2022/11/12/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/index.html">
+<meta property="og:site_name" content="Shawn Home">
+<meta property="og:description" content="对于各种数据系统而言，保证数据不丢失，都是一个比较大的话题，我最近正在读《数据密集型应用系统设计》这本书，准备就保证数据不会丢失这个问题做一次总结，另外也会介绍一下各个数据系统对于如何保证数据不丢失的解决方案有哪些。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/data_direction.svg">
+<meta property="og:image" content="http://example.com/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/transaction.svg">
+<meta property="og:image" content="http://example.com/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/Phantom_Read.svg">
+<meta property="og:image" content="http://example.com/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/lost_update_1.svg">
+<meta property="og:image" content="http://example.com/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/write_skew.svg">
+<meta property="article:published_time" content="2022-11-12T12:54:21.000Z">
+<meta property="article:modified_time" content="2022-11-13T10:36:50.885Z">
+<meta property="article:author" content="Shawn">
+<meta property="article:tag" content="Transaction">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/data_direction.svg">
+
+<link rel="canonical" href="http://example.com/2022/11/12/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>如何保证数据不丢失 | Shawn Home</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Shawn Home</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/11/12/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Shawn">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Shawn Home">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          如何保证数据不丢失
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-11-12 20:54:21" itemprop="dateCreated datePublished" datetime="2022-11-12T20:54:21+08:00">2022-11-12</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-11-13 18:36:50" itemprop="dateModified" datetime="2022-11-13T18:36:50+08:00">2022-11-13</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Data-System/" itemprop="url" rel="index"><span itemprop="name">Data System</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>对于各种数据系统而言，保证数据不丢失，都是一个比较大的话题，我最近正在读《数据密集型应用系统设计》这本书，准备就保证数据不会丢失这个问题做一次总结，另外也会介绍一下各个数据系统对于如何保证数据不丢失的解决方案有哪些。</p>
+<span id="more"></span>
+
+<h1 id="数据流向"><a href="#数据流向" class="headerlink" title="数据流向"></a>数据流向</h1><p><img src="/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/data_direction.svg" alt="data_direction"></p>
+<p>数据的流向都是从某个客户端发起写入请求，请求成功后数据写入到数据系统，成功写入到数据系统的数据可以被另外的客户端读取。了解数据流向对于如何保证数据不丢失是一个比较重要的事，因为数据的位置会在三个地方，写入请求中，数据系统，读取请求，保证数据不丢失，即需要保证数据在这三个地方都不会丢失，并且解决方案也不相同。</p>
+<p>在写入过程中，保证数据不丢失，就是保证数据能够成功写入数据系统，解决方案通常是事务。</p>
+<p>在数据过程中，保证数据不丢失，就是保证数据能够不管在什么情况下，都能够保证成功写入的数据不会丢失，解决方案通常是持久化。另外，如果数据存储的磁盘坏了或者磁盘满了，又如何保证数据不丢失呢？这种问题的解决方案通常都是日志，数据复制和数据分区。</p>
+<p>在读取过程中，一般数据系统，只要能够持久化到磁盘，就能保证能够读取到数据，但如果是消息系统，消费者消费数据，如果消费者消费数据失败，可能会导致消息丢失，这类系统的解决方案通常是消费者提供commit机制（也是一种事务机制，或者ack机制）。</p>
+<p>本文主要讨论的是事务（单机）。</p>
+<h1 id="事务"><a href="#事务" class="headerlink" title="事务"></a>事务</h1><p>几乎所有的数据系统都会支持事务处理，尽管具体实现方面会有所不同，另外由于NoSQL或者其他分布式数据库的崛起，为了兼容性能和高可用性，也不一定所有的事务特性都实现了，但事务的概念几乎没有什么变化。</p>
+<p>事务的ACID四大特性被大家所熟知，另外就是分布式事务的BASE理论，不过本文将不介绍分布式相关的内容。</p>
+<p>ACID分别代表着原子性(Atomicity)，一致性(Consistency)，隔离性(Isolation)，持久性(Duration)</p>
+<h2 id="原子性"><a href="#原子性" class="headerlink" title="原子性"></a>原子性</h2><p>一个事务里包含了多个写操作，完成了一部分写入后，系统发生了故障，包括但不局限于进程crash，网络中断，磁盘满了等异常情况，导致最终没发提交事务，事务就会终止，并且数据库须丢弃或者撤销这些局部完成的更改。</p>
+<p>如果没有原子性的保证，多个写操作中间发生了错误，就需要追踪哪些写操作已经生效，这个寻找过程会非常麻烦。或许有些应用实现了重试功能，但如何保证不会重复执行已经生效的写操作，也是比较麻烦的。相比较之下，事务的原子性能够大大简化这个问题，如果事务已经终止，应用程序可以毫无顾忌的重试，因为原子性已经保证了数据没有发生更改。</p>
+<h2 id="一致性"><a href="#一致性" class="headerlink" title="一致性"></a>一致性</h2><p>对数据有特定的预期状态，任何数据更改必须满足这些状态约束。就拿转账来说，假设用户A和用户B两者的钱加起来一共是5000，那么不管A和B之间如何转账，转几次账，事务结束后两个用户的钱相加起来应该还得是5000，这就是事务的一致性。</p>
+<p>这种一致性本质上要求应用层来维护状态的一致性，这不是数据库可以保证的事情，主要数据库也很难检测到不一致的状态，从而能够阻止该操作。当然，关系型数据库可能会通过唯一性约束，外键，触发器等手段来保证，但是手段有限。</p>
+<h2 id="隔离性"><a href="#隔离性" class="headerlink" title="隔离性"></a>隔离性</h2><p>当多个客户端并发访问数据库时，比如操作同一张表时，数据库为每一个用户开启的事务，不能被其他事务的操作所干扰，多个并发事务之间要相互隔离。</p>
+<p>并发是一个比较头疼的问题，可能会出现一些意想不到的异常，例如<strong>脏读，不可重复读，幻读，脏写，更新丢失</strong>等异常情况。如果为了安全，多个事务执行，都可以串行化执行，那这样性能就很低，一些主流的数据库，比如oracle11g甚至根本没有实现串行化。那如何平衡性能与并发的问题，这就需要引入隔离级别了，另外不同的隔离级别也是不同异常情况的解决方案</p>
+<p>下面就简单简单介绍一下隔离级别。</p>
+<h3 id="隔离级别"><a href="#隔离级别" class="headerlink" title="隔离级别"></a>隔离级别</h3><p><img src="/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/transaction.svg" alt="transaction"></p>
+<p>如图所示，两个事务的执行过程为：</p>
+<ul>
+<li>T1时刻事务A和B同时启动</li>
+<li>T2时刻事务A和B都查询到v = 1</li>
+<li>T3时刻事务B将v改成2</li>
+<li>T4时刻事务B还未提交，事务A就去获取v的值</li>
+<li>T5时刻事务B提交事务</li>
+<li>T6时刻事务A再次获取v的值</li>
+<li>T7时刻事务A提交</li>
+<li>T8时刻事务A再次获取A的值</li>
+</ul>
+<p>下面我们将结合这个时序图，来描述在各个隔离级别下，事务A在不同时刻下获取到v的值为多少</p>
+<h4 id="读-未提交-Read-Uncommitted"><a href="#读-未提交-Read-Uncommitted" class="headerlink" title="读-未提交(Read Uncommitted)"></a>读-未提交(Read Uncommitted)</h4><p>一个事务的更新语句没有提交，但是别的事务可以读到这个改变。</p>
+<p>在这个隔离级别下，事务A在T4时刻获取到v的值就已经为2了，即使事务B还未提交，这种当一个事务读取到了另一个事务尚未提交的修改的现象就是**脏读(Dirty Read)**。</p>
+<p>这种隔离级别，是最弱的隔离级别，只能防止<strong>脏写</strong>，一般不会用，有些数据系统设置都没有提供这种隔离级别的实现。</p>
+<h4 id="读-提交-Read-Committed"><a href="#读-提交-Read-Committed" class="headerlink" title="读-提交(Read Committed)"></a>读-提交(Read Committed)</h4><p>一个事务提交之后，它做的变更才会被其他事务看到。</p>
+<p>在这个隔离级别下，因为事务B在T5时刻提交了事务，所以事务A在T4时刻获取到v的值还是为1，这就防止了脏读。另外，事务A在T6，T8时刻获取到v的值为2。</p>
+<p>在这个隔离级别下， 由于事务A在T7时刻才提交，事务A在提交之前，T4，T6两次获取到v的值不一样，产生了**不可重复读(Nonrepeatable Read)**的异常。</p>
+<p>一个事务对同一行数据重复读取两次，但是却得到了不同的结果。同一查询在同一事务中多次进行，由于其他提交事务所做的修改或删除，每次返回不同的结果集，此时发生<strong>不可重复读</strong>，又被称为<strong>读倾斜(Read Skew)</strong></p>
+<h4 id="可重复读-Repeatable-Read"><a href="#可重复读-Repeatable-Read" class="headerlink" title="可重复读(Repeatable Read)"></a>可重复读(Repeatable Read)</h4><p>一个事务执行过程中看到的数据，总是跟这个事务在启动时看到的数据是一致的。当然在可重复读隔离级别下，未提交变更对其他事务也是不可见的。</p>
+<p>在这个隔离级别下，由于事务A是在T7时刻才提交，所以事务A在T4和T6时刻获取到v的值都是1，避免了不可重复读。在T8时刻获取到v的值为2。</p>
+<p>在这个隔离级别下，无法防止**幻读(Phantom Read)**，通过提交事务B之后，事务A出现莫名奇妙的数据遗失或数据增多。幻读主要针对的是数据新增和删除的情况。</p>
+<p><img src="/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/Phantom_Read.svg" alt="Phantom_Read"></p>
+<p>如上图所示，幻读的发生经过如下：</p>
+<ul>
+<li>T1时刻，事务AB同时开启</li>
+<li>T2时刻，事务AB同时查到user表里的数据只有Shawn</li>
+<li>T3时刻，事务A新增了一个用户John</li>
+<li>T4时刻，事务A提交</li>
+<li>T5时刻，事务B再次查看user表，发现多了一条John的用户记录，出现幻读</li>
+<li>T6时刻，事务B提交</li>
+</ul>
+<h4 id="串行化-Serializable"><a href="#串行化-Serializable" class="headerlink" title="串行化(Serializable)"></a>串行化(Serializable)</h4><p>顾名思义是对于同一行记录，“写”会加“写锁”，“读”会加“读锁”。当出现读写锁冲突的时候，后访问的事务必须等前一个事务执行完成，才能继续执行。</p>
+<p>在这个隔离级别下，事务A在T4和T6时刻获取到v的值都是1，在T8时刻获取到v的值为2。</p>
+<p>在这个隔离级别下，由于已经串行化执行了，可以完全避免各种异常问题，即使是难以解决的幻读和写倾斜。</p>
+<p>串行化的实现基本是以下3种方法之一</p>
+<ol>
+<li>严格按照串行顺序执行，解决并发问题最直接的方法就是避免并发，所有线程都按照顺序执行。</li>
+<li>两阶段加锁：<ul>
+<li>分为共享锁与排它锁<ul>
+<li>多个事务可同时持有共享锁</li>
+<li>有一个写入事件则升级共享锁为排它锁，该锁阻塞其它读取与写入，直到事务完成</li>
+<li>性能相比较弱隔离级别差得多</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>乐观并发控制技术，例如可串行化的快照隔离，mvcc技术</li>
+</ol>
+<h3 id="并发写异常情况"><a href="#并发写异常情况" class="headerlink" title="并发写异常情况"></a>并发写异常情况</h3><p>上面介绍的五种隔离级别，主要都是为了解决只读事务遇到并发写的时候可以读取到什么的问题，那多个事务并发写，又会发生怎样的异常情况呢？下面主要介绍3种写异常，<strong>脏写(Dirty Write)，更新丢失(Lost Update)，写倾斜(Write Skew)</strong></p>
+<h4 id="脏写-Dirty-Write"><a href="#脏写-Dirty-Write" class="headerlink" title="脏写(Dirty Write)"></a>脏写(Dirty Write)</h4><p>当两个事务同时尝试去更新某一条数据记录时，就肯定会存在一个先一个后。而当事务A更新时，事务A还没提交，事务B就也过来进行更新，覆盖了事务A提交的更新数据，这就是脏写。</p>
+<p>文上提到的4种隔离级别下，都不存在脏写情况。因为在这些隔离级别下，当两个事务A和B尝试去更新同一条数据时，假定A先更新数据，会对更新的数据行记录加上排他锁(也叫写锁，悲观锁)，除非事务A提交或终止从而释放排他锁，否则事务B都是无法更新数据的。</p>
+<h4 id="更新丢失-Lost-Update"><a href="#更新丢失-Lost-Update" class="headerlink" title="更新丢失(Lost Update)"></a>更新丢失(Lost Update)</h4><h5 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h5><p>当多个事务并发写同一数据时，先执行的事务所写的数据会被后写的覆盖，这也就是更新丢失。前面的脏写情形，就属于会导致更新丢失问题的一种情形。</p>
+<p>除了这个，更新丢失主要发生在read-modify-write类型的事务当中：就是要先查询数据，然后计算新的数据，最后写回新的数据。下面是几个具体的情形例子：</p>
+<ol>
+<li>数值更新，例如计数或账户余额更新（先要查询当前值，再计算出要更新的值，最后执行更新操作写进数据库）</li>
+<li>多个用户同时在线编辑同一份文档。</li>
+</ol>
+<h5 id="为何会产生更新丢失"><a href="#为何会产生更新丢失" class="headerlink" title="为何会产生更新丢失"></a>为何会产生更新丢失</h5><p>为了理解方便更新丢失的逻辑，把上述的图片拉下来，我们再来分析一下。</p>
+<p><img src="/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/lost_update_1.svg" alt="transaction"></p>
+<ul>
+<li>T1时刻事务A和B同时启动</li>
+<li>T2时刻事务A和B都查询到v = 1</li>
+<li>T3时刻事务B执行v = v(T2时刻查到的值) + 1</li>
+<li>T4时刻事务B还未提交，事务A查询v的值</li>
+<li>T5时刻事务B提交</li>
+<li>T6时刻事务A执行v = v(T4时刻查到的值) + 1</li>
+<li>T7时刻事务A提交</li>
+</ul>
+<ol>
+<li>在<strong>读提交或者更高的隔离级别</strong>下，只要事务B还未提交，那么事务A就永远不知道事务B的更新值，进而就会使得事务A会忽略掉事务B所产生的变更，T3时刻事务B已经将v更新为2，但事务A查询到v的值还是1，所以事务A在T6时刻执行v+1的时候，预期应该变更为3，但实际还是2。</li>
+<li>在<strong>读未提交隔离级别</strong>下，如果事务B的变更，是在事务A查询之前，那么就不会产生更新丢失，T3时刻，事务B已经将v更新为2，T4时刻事务A查询到值已经为2了，所以事务A在T6时刻执行v+1，值已经变成了3，这个是符合预期的。但如果事务B的变更，是在事务A查询之后产生（T3时刻事务A先去查询v的值为1，T4时刻事务B再去更新v的值，T6时刻事务A执行v+1，更新完以后值为2，也不符合预期），那就无法避免更新丢失。</li>
+</ol>
+<h5 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h5><ol>
+<li><p>原子写操作</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">update table set v = v + 1 where id = 1; </span><br></pre></td></tr></table></figure>
+
+<p>如果数据系统支持这种原子写操作，那么它就是推荐的最佳方式。</p>
+</li>
+<li><p>显式加锁</p>
+<p>如果数据系统不支持原子写操作，另一种防止更新丢失的方法是由应用程序显示锁定待更新的对象，然后应用程序可以执行read-modify-write操作。此时如果有其他事务想要同时读取对象，则必须等待当前正在执行的事务完成。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">begin transaction;</span><br><span class="line">select v from table where id = 1 for update;</span><br><span class="line">update table set v = 3 where id = 1;</span><br><span class="line">commit;</span><br></pre></td></tr></table></figure></li>
+<li><p>自动检测更新丢失</p>
+<p>原子写操作和显式加锁实质上都是将事务给串行化了。自动检测说的就是当事务管理器检测到事务A造成更新丢失问题，就立即终止事务A，让事务A再一次尝试查询-计算-更新的流程,事务仍然是并行执行的。</p>
+<p>PostgreSQL的可重复读，Oracle的串行以及SQL Server的快照隔离能够自动检测更新丢失，但Mysql的Innodb引擎下的可重复读没有此功能。</p>
+</li>
+<li><p>CAS(compare and set)</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">update table set v = 2 where id = 1 and v = 1;</span><br></pre></td></tr></table></figure>
+
+<p>如果两个事务A和B，现在都要对id=1的记录执行累加操作，只要其中任何一个事务执行了更新操作，另一个事务执行时v=1的条件都不会满足，从而就规避了更新丢失的问题。 </p>
+<p>但是有的数据库where条件里v获取的本就是旧的快照数据，即不是某一个事务更新后的新数据，那这里的更新丢失问题还是要发生的了。</p>
+</li>
+</ol>
+<h4 id="写倾斜-Write-Skew"><a href="#写倾斜-Write-Skew" class="headerlink" title="写倾斜(Write Skew)"></a>写倾斜(Write Skew)</h4><h5 id="定义-1"><a href="#定义-1" class="headerlink" title="定义"></a>定义</h5><p>引用数据密集型应用系统设计里的案例来解释，在医院值班系统中，必须确保至少有一个医生在值班，假设这个科室就两个医生，他们都因为身体不舒服同时在系统上点击了请假按钮，我们画一张时序图，看看会发生什么微妙的情况。</p>
+<p><img src="/images/%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E6%95%B0%E6%8D%AE%E4%B8%8D%E4%B8%A2%E5%A4%B1/write_skew.svg"></p>
+<ul>
+<li>T1时刻，事务AB同时启动事务</li>
+<li>T2时刻，执行select count(1) from t where on_call = true，返回结果都是2</li>
+<li>T3时刻，事务B发现返回结果2，满足请假条件，执行update on_call = false;</li>
+<li>T4时刻，事务A也发现返回结果2，满足请假条件，执行update on_call = false;</li>
+<li>T5时刻，事务B提交</li>
+<li>T6时刻，事务A提交</li>
+</ul>
+<p>根据时序图发现，事务都成功提交了， 最后的结果就是没有医生在值班，这就违反了至少一名医生在值班的业务要求，这就是写倾斜的异常情况，它既不是脏写，也不是更新丢失，因为两笔事务更新的不是同一个对象（分别是两个医生的值班记录）。</p>
+<h5 id="为何会产生写倾斜"><a href="#为何会产生写倾斜" class="headerlink" title="为何会产生写倾斜"></a>为何会产生写倾斜</h5><p>所有写倾斜的例子都遵循以下类似的模式：</p>
+<ol>
+<li>首先输入一些匹配条件，查询到所有满足条件的记录。</li>
+<li>再根据返回的记录，应用层根据业务逻辑来决定下一步的操作。</li>
+<li>如果应用层决定继续执行，它将发起数据库写入操作。</li>
+</ol>
+<h5 id="解决方案-1"><a href="#解决方案-1" class="headerlink" title="解决方案"></a>解决方案</h5><p>处理写倾斜的情况会有比较多的限制</p>
+<ul>
+<li><p>单对象的原子操作不起作用了。</p>
+</li>
+<li><p>快照隔离级别都解决不了这个问题，需要串行化隔离级别</p>
+</li>
+<li><p>数据库虽然支持一些自定义约束，但是对涉及多个对象的约束支持不好</p>
+</li>
+<li><p>不使用串行化隔离级别的次优选择是对选择的多行对象<strong>显示的加锁</strong>，可以这样：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">BEGIN ;</span><br><span class="line">select * from doctors</span><br><span class="line">where on_call=true</span><br><span class="line">and shift_id=1234 for update;</span><br><span class="line"></span><br><span class="line">update doctors</span><br><span class="line">set on_call= false</span><br><span class="line">where  name=&#x27;Alice&#x27;</span><br><span class="line">and shift_id=1234;</span><br><span class="line">commit </span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="持久性"><a href="#持久性" class="headerlink" title="持久性"></a>持久性</h2><p>保证了事务一旦提交成功，即使存在硬件故障或数据库崩溃的情况，事务写入的数据也不会丢失。</p>
+<p>对于单节点数据系统而言，持久性通常意味着数据已经写入了磁盘，如果磁盘坏了还能通过预写日志等手段恢复。</p>
+<p>对于多节点数据系统而言，持久性则意味着数据已经成功复制到多个节点，所以事务必须等数据写入和复制完成才能提交事务。</p>
+<p>对于持久性而言，主要看各个数据系统是如何实现持久化的，但本文主要介绍一下事务，以后我们将深入了解数据系统的存储模块的设计。</p>
+<h1 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h1><p>了解完事务后，我们发现事务的本质就是保证了数据能够安全写入到数据系统中。</p>
+<ul>
+<li>原子性，保证了多个写操作，要么都成功，要么都失败。</li>
+<li>一致性，保证了数据状态一致性，例如转账的案例。</li>
+<li>隔离性，不同的隔离级别，分别解决了不同的并发异常，保证数据安全性。</li>
+<li>一致性，保证了数据能够安全写入磁盘，即使断电，服务crash，也能保证数据不丢失。</li>
+</ul>
+<p>另外附上隔离级别和并发写异常的总览</p>
+<p><strong>隔离级别</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>异常</th>
+<th>读未提交</th>
+<th>读提交</th>
+<th>可重复读</th>
+<th>串行化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>脏读</td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>不可重复读</td>
+<td>❌</td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>幻读</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+</tbody></table>
+<p><strong>并发写异常</strong></p>
+<table>
+<thead>
+<tr>
+<th>异常</th>
+<th>解决方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>脏写</td>
+<td>几乎所有数据库实现都可以防治脏写</td>
+</tr>
+<tr>
+<td>更新丢失</td>
+<td>select … for update</td>
+</tr>
+<tr>
+<td>写倾斜</td>
+<td>只有可串行化的隔离级别才能防止这种异常</td>
+</tr>
+</tbody></table>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Transaction/" rel="tag"># Transaction</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/10/03/SparkSQL%E8%AF%BB%E5%86%99jdbc%E4%B8%80%E4%BA%9B%E9%B2%9C%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E4%BA%8B%E5%84%BF/" rel="prev" title="SparkSQL读写jdbc一些鲜为人知的事儿">
+      <i class="fa fa-chevron-left"></i> SparkSQL读写jdbc一些鲜为人知的事儿
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81%E5%90%91"><span class="nav-number">1.</span> <span class="nav-text">数据流向</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1"><span class="nav-number">2.</span> <span class="nav-text">事务</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%9F%E5%AD%90%E6%80%A7"><span class="nav-number">2.1.</span> <span class="nav-text">原子性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E8%87%B4%E6%80%A7"><span class="nav-number">2.2.</span> <span class="nav-text">一致性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9A%94%E7%A6%BB%E6%80%A7"><span class="nav-number">2.3.</span> <span class="nav-text">隔离性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB"><span class="nav-number">2.3.1.</span> <span class="nav-text">隔离级别</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%BB-%E6%9C%AA%E6%8F%90%E4%BA%A4-Read-Uncommitted"><span class="nav-number">2.3.1.1.</span> <span class="nav-text">读-未提交(Read Uncommitted)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%BB-%E6%8F%90%E4%BA%A4-Read-Committed"><span class="nav-number">2.3.1.2.</span> <span class="nav-text">读-提交(Read Committed)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%AF%E9%87%8D%E5%A4%8D%E8%AF%BB-Repeatable-Read"><span class="nav-number">2.3.1.3.</span> <span class="nav-text">可重复读(Repeatable Read)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%B2%E8%A1%8C%E5%8C%96-Serializable"><span class="nav-number">2.3.1.4.</span> <span class="nav-text">串行化(Serializable)</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B9%B6%E5%8F%91%E5%86%99%E5%BC%82%E5%B8%B8%E6%83%85%E5%86%B5"><span class="nav-number">2.3.2.</span> <span class="nav-text">并发写异常情况</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%84%8F%E5%86%99-Dirty-Write"><span class="nav-number">2.3.2.1.</span> <span class="nav-text">脏写(Dirty Write)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E4%B8%A2%E5%A4%B1-Lost-Update"><span class="nav-number">2.3.2.2.</span> <span class="nav-text">更新丢失(Lost Update)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89"><span class="nav-number">2.3.2.2.1.</span> <span class="nav-text">定义</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%BA%E4%BD%95%E4%BC%9A%E4%BA%A7%E7%94%9F%E6%9B%B4%E6%96%B0%E4%B8%A2%E5%A4%B1"><span class="nav-number">2.3.2.2.2.</span> <span class="nav-text">为何会产生更新丢失</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">2.3.2.2.3.</span> <span class="nav-text">解决方案</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%99%E5%80%BE%E6%96%9C-Write-Skew"><span class="nav-number">2.3.2.3.</span> <span class="nav-text">写倾斜(Write Skew)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89-1"><span class="nav-number">2.3.2.3.1.</span> <span class="nav-text">定义</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%BA%E4%BD%95%E4%BC%9A%E4%BA%A7%E7%94%9F%E5%86%99%E5%80%BE%E6%96%9C"><span class="nav-number">2.3.2.3.2.</span> <span class="nav-text">为何会产生写倾斜</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88-1"><span class="nav-number">2.3.2.3.3.</span> <span class="nav-text">解决方案</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%81%E4%B9%85%E6%80%A7"><span class="nav-number">2.4.</span> <span class="nav-text">持久性</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Shawn</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Shawn</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
