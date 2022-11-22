@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" viewBox="165 220 583 89" width="583" height="89">
+  <defs>
+    <font-face font-family="Helvetica Neue" font-size="14" panose-1="2 0 5 3 0 0 0 2 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="951.9958" descent="-212.99744" font-weight="400">
+      <font-face-src>
+        <font-face-name name="HelveticaNeue"/>
+      </font-face-src>
+    </font-face>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="StickArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-11 -5 12 10" markerWidth="12" markerHeight="10" color="#666a6b">
+      <g>
+        <path d="M -9.6 0 L 0 0 M 0 3.6 L -9.6 0 L 0 -3.6" fill="none" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.19.4\n2022-11-20 11:05:29 +0000</metadata>
+  <g id="Canvas_1" stroke-opacity="1" stroke-dasharray="none" fill="none" fill-opacity="1" stroke="none">
+    <title>Canvas 1</title>
+    <rect fill="white" x="165" y="220" width="583" height="89"/>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_70">
+        <rect x="166" y="258" width="112.5" height="50.5" fill="white"/>
+        <path d="M 166 258 L 278.5 258 L 278.5 308.5 L 166 308.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+        <text transform="translate(171 266.858)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="23.705" y="13">V1: v = 1</tspan>
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="1.942" y="29.392">Row trx_id = 10</tspan>
+        </text>
+      </g>
+      <g id="Graphic_71">
+        <rect x="322.25" y="258" width="112.5" height="50.5" fill="white"/>
+        <path d="M 322.25 258 L 434.75 258 L 434.75 308.5 L 322.25 308.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+        <text transform="translate(327.25 266.858)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="23.705" y="13">V2: v = 2</tspan>
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="1.942" y="29.392">Row trx_id = 15</tspan>
+        </text>
+      </g>
+      <g id="Graphic_72">
+        <rect x="478.5" y="258" width="112.5" height="50.5" fill="white"/>
+        <path d="M 478.5 258 L 591 258 L 591 308.5 L 478.5 308.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+        <text transform="translate(483.5 266.858)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="23.705" y="13">V3: v = 4</tspan>
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="1.942" y="29.392">Row trx_id = 23</tspan>
+        </text>
+      </g>
+      <g id="Graphic_73">
+        <rect x="634.75" y="258" width="112.5" height="50.5" fill="white"/>
+        <rect x="634.75" y="258" width="112.5" height="50.5" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(639.75 266.858)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="23.705" y="13">V4: v = 8</tspan>
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="1.942" y="29.392">Row trx_id = 41</tspan>
+        </text>
+      </g>
+      <g id="Line_74">
+        <title>Transition</title>
+        <line x1="290" y1="283.25" x2="322.25" y2="283.25" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Line_75">
+        <title>Transition</title>
+        <line x1="446.25" y1="283.25" x2="478.5" y2="283.25" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Line_76">
+        <title>Transition</title>
+        <line x1="602.5" y1="283.25" x2="634.75" y2="283.25" marker-start="url(#StickArrow_Marker)" stroke="#666a6b" stroke-linecap="square" stroke-linejoin="bevel" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Graphic_77">
+        <text transform="translate(291.429 263)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="0" y="13">U1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_78">
+        <text transform="translate(447.679 263)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="0" y="13">U2</tspan>
+        </text>
+      </g>
+      <g id="Graphic_79">
+        <text transform="translate(603.679 263)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="0" y="13">U3</tspan>
+        </text>
+      </g>
+      <g id="Graphic_80">
+        <text transform="translate(171 225)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" font-weight="400" fill="black" x="4973799e-20" y="13">Set v = v * 2</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>
