@@ -20,18 +20,23 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="多线程编程bug源头cpu,内存,I&#x2F;O设备都在不断的迭代，不断朝着更快的方向努力，但是，在这个快速发展的过程中，有一个核心矛盾一直存在，就是这三者的速度差异。cpu &gt; 内存 &gt; i&#x2F;0。根据木桶理论，程序整体的性能取决于最慢的操作-i&#x2F;o设备的读写，也就是说单方面提高cpu性能是无效的。为了平衡这三者的速度差异，计算机体系机构，操作系统，编译程序都做出了贡献，主要体现在：  cpu">
+  <meta name="description" content="本文主要分析多线程编程Bug的源头以及如何通过Java内存模型来解决多线程问题，另外分析一下Cpu缓存一致性协议对可见性的影响">
 <meta property="og:type" content="article">
 <meta property="og:title" content="java线程-jmm概述">
 <meta property="og:url" content="http://example.com/2023/01/28/java%E7%BA%BF%E7%A8%8B-jmm%E6%A6%82%E8%BF%B0/index.html">
 <meta property="og:site_name" content="Shawn Home">
-<meta property="og:description" content="多线程编程bug源头cpu,内存,I&#x2F;O设备都在不断的迭代，不断朝着更快的方向努力，但是，在这个快速发展的过程中，有一个核心矛盾一直存在，就是这三者的速度差异。cpu &gt; 内存 &gt; i&#x2F;0。根据木桶理论，程序整体的性能取决于最慢的操作-i&#x2F;o设备的读写，也就是说单方面提高cpu性能是无效的。为了平衡这三者的速度差异，计算机体系机构，操作系统，编译程序都做出了贡献，主要体现在：  cpu">
+<meta property="og:description" content="本文主要分析多线程编程Bug的源头以及如何通过Java内存模型来解决多线程问题，另外分析一下Cpu缓存一致性协议对可见性的影响">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E7%BC%93%E5%AD%98-%E5%8F%AF%E8%A7%81%E6%80%A7.svg">
 <meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E7%BA%BF%E7%A8%8B%E5%88%87%E6%8D%A2-%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98.svg">
 <meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E7%BC%96%E8%AF%91%E4%BC%98%E5%8C%96-%E6%9C%89%E5%BA%8F%E6%80%A7%E9%97%AE%E9%A2%98.svg">
+<meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E5%AE%8C%E5%85%A8%E7%A6%81%E6%AD%A2%E6%8C%87%E4%BB%A4%E9%87%8D%E6%8E%92.svg">
+<meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E9%83%A8%E5%88%86%E7%A6%81%E6%AD%A2%E6%8C%87%E4%BB%A4%E9%87%8D%E6%8E%92.svg">
+<meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/volatile%E6%9C%89%E5%BA%8F%E6%80%A7%E9%97%AE%E9%A2%98.svg">
+<meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/cpu%E7%BC%93%E5%AD%98%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE-MESI.svg">
+<meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/cpu%E7%BC%93%E5%AD%98%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE-StoreBuffer-InvalidateQueue.svg">
 <meta property="article:published_time" content="2023-01-28T11:15:44.000Z">
-<meta property="article:modified_time" content="2023-01-28T11:16:42.313Z">
+<meta property="article:modified_time" content="2023-01-29T08:31:15.069Z">
 <meta property="article:author" content="Shawn">
 <meta property="article:tag" content="java线程">
 <meta property="article:tag" content="jmm">
@@ -178,10 +183,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2023-01-28 19:15:44 / Modified: 19:16:42" itemprop="dateCreated datePublished" datetime="2023-01-28T19:15:44+08:00">2023-01-28</time>
+              <time title="Created: 2023-01-28 19:15:44" itemprop="dateCreated datePublished" datetime="2023-01-28T19:15:44+08:00">2023-01-28</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-01-29 16:31:15" itemprop="dateModified" datetime="2023-01-29T16:31:15+08:00">2023-01-29</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
@@ -203,7 +214,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h1 id="多线程编程bug源头"><a href="#多线程编程bug源头" class="headerlink" title="多线程编程bug源头"></a>多线程编程bug源头</h1><p>cpu,内存,I/O设备都在不断的迭代，不断朝着更快的方向努力，但是，在这个快速发展的过程中，有一个核心矛盾一直存在，就是这三者的速度差异。cpu &gt; 内存 &gt; i/0。根据木桶理论，程序整体的性能取决于最慢的操作-i/o设备的读写，也就是说单方面提高cpu性能是无效的。<br>为了平衡这三者的速度差异，计算机体系机构，操作系统，编译程序都做出了贡献，主要体现在：</p>
+        <p>本文主要分析多线程编程Bug的源头以及如何通过Java内存模型来解决多线程问题，另外分析一下Cpu缓存一致性协议对可见性的影响</p>
+<span id="more"></span>
+
+<h1 id="多线程编程bug源头"><a href="#多线程编程bug源头" class="headerlink" title="多线程编程bug源头"></a>多线程编程bug源头</h1><p>cpu,内存,I/O设备都在不断的迭代，不断朝着更快的方向努力，但是，在这个快速发展的过程中，有一个核心矛盾一直存在，就是这三者的速度差异。cpu &gt; 内存 &gt; i/0。根据木桶理论，程序整体的性能取决于最慢的操作-i/o设备的读写，也就是说单方面提高cpu性能是无效的。<br>为了平衡这三者的速度差异，计算机体系机构，操作系统，编译程序都做出了贡献，主要体现在：</p>
 <ol>
 <li>cpu增加了缓存，以均衡与内存的速度差异；</li>
 <li>操作系统增加了进程，线程，以分时复用cpu,进而均衡cpu与i/o设备的速度差异；</li>
@@ -224,7 +238,7 @@
 <p>对于上面的三个指令来说，如果线程a刚刚执行完指令1，就和线程b发生了线程切换，导致count的值还是为0，而不是+1之后的值，就会导致其结果不是我们希望的2.</p>
 <p>我们把一个或者多个操作在cpu执行的过程中不被中断的特性称为原子性。</p>
 <p><img src="/images/java%E7%BA%BF%E7%A8%8B/%E7%BA%BF%E7%A8%8B%E5%88%87%E6%8D%A2-%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98.svg" alt="线程切换-原子性问题"></p>
-<h2 id="编译优化-有序性问题"><a href="#编译优化-有序性问题" class="headerlink" title="编译优化-有序性问题"></a>编译优化-有序性问题</h2><p>有序性指的是程序按照代码的先后顺序执行。<br>但是编译器为了优化性能，有时候会改变程序中语句的先后顺序。例如程序：“a = 6; b = 7”，编译优化后的顺序可能为：”b=7;a=6;“。<br>java中最经典的案例就是单例模式，利用双重检查创建单例对象，保证线程安全。</p>
+<h2 id="编译执行-有序性问题"><a href="#编译执行-有序性问题" class="headerlink" title="编译执行-有序性问题"></a>编译执行-有序性问题</h2><p>有序性指的是程序按照代码的先后顺序执行。<br>但是编译器为了优化性能，有时候会改变程序中语句的先后顺序。例如程序：“a = 6; b = 7”，编译优化后的顺序可能为：”b=7;a=6;“。<br>java中最经典的案例就是单例模式，利用双重检查创建单例对象，保证线程安全。</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Singleton</span>&#123;</span><br><span class="line">    <span class="keyword">static</span> Singleton bean;</span><br><span class="line">    <span class="keyword">static</span> Singleton <span class="title function_">getInstance</span><span class="params">()</span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(bean == <span class="literal">null</span>)&#123;</span><br><span class="line">            <span class="keyword">synchronized</span>(Singleton.class)&#123;</span><br><span class="line">                <span class="keyword">if</span>(bean == <span class="literal">null</span>)&#123;</span><br><span class="line">                    bean = <span class="keyword">new</span> <span class="title class_">Singleton</span>();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> bean;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>假设有两个线程a b同时调用getInstance()方法，于是同时对Singleton.class加锁，此时jvm保证只有一个线程能够加锁成功，假设是a，那么b就会处于等待状态，当a执行完，释放锁之后，B被唤醒，继续执行，发现已经有bean对象，所以直接return了。我们以为jvm创建对象的顺序是这样的：</p>
@@ -241,6 +255,106 @@
 </ol>
 <p>当线程a先执行完getinstance()方法，当执行完指令2的时候，恰好发生了线程切换，切换到了线程b，如果此时线程B，也执行了getinstance方法，那么线程B在执行第一个判断的时候，就会发现bean!=null，直接return,如果这个时候我们访问bean对象的时候，就会报空指针异常。</p>
 <p><img src="/images/java%E7%BA%BF%E7%A8%8B/%E7%BC%96%E8%AF%91%E4%BC%98%E5%8C%96-%E6%9C%89%E5%BA%8F%E6%80%A7%E9%97%AE%E9%A2%98.svg" alt="编译优化-有序性问题"></p>
+<p>实际上，在代码的编译执行过程中，有三种情况可能会导致指令重排</p>
+<ol>
+<li>编译优化导致的重排序</li>
+<li>CPU指令并行执行导致的重排序</li>
+<li>硬件内存模型导致的重排序</li>
+</ol>
+<h1 id="Java内存模型"><a href="#Java内存模型" class="headerlink" title="Java内存模型"></a>Java内存模型</h1><p>从上面的分析，CPU缓存导致了可见性问题，线程切换导致了原子性问题，编译执行导致了有序性问题。那如何解决这三个问题呢？很直接的做法就是禁止使用CPU缓存，禁止线程切换，禁止指令重排。但是CPU缓存，线程切换，指令重排都是为了提高代码运行的效率，但为了保证多线程编程不会出现问题，过度禁止使用这些技术，也会影响代码执行效率，所以java内存模型就应运而生，对应的规范就是JSR-133。之所以叫java内存模型，是因为要解决的问题，都是跟内存有关。</p>
+<p>Java内存模型解决多线程的3个问题，主要依靠3个关键词和1个规则，3个关键词分别是：volatile、synchronized、final，1个规则是：happens-before规则。</p>
+<h2 id="volatile"><a href="#volatile" class="headerlink" title="volatile"></a>volatile</h2><p>volatile关键字可以解决可见性、有序性和部分原子性问题。</p>
+<h3 id="volatile如何解决可见性问题"><a href="#volatile如何解决可见性问题" class="headerlink" title="volatile如何解决可见性问题"></a>volatile如何解决可见性问题</h3><p>对于用volatile修饰的变量，在编译成机器指令时，会在写操作后面，加上一条特殊的指令：“lock addl #0x0, (%rsp)”，这条指令会将CPU对此变量的修改，立即写入内存，并通知其他CPU更新缓存数据。</p>
+<h3 id="volatile如何解决有序性问题"><a href="#volatile如何解决有序性问题" class="headerlink" title="volatile如何解决有序性问题"></a>volatile如何解决有序性问题</h3><p>禁止指令重排序又分为完全禁止指令重排序和部分禁止指令重排序。完全禁止指令重排是指volatile修饰的变量的读写指令不可以跟其前面的读写指令重排，也不可以跟后面的读写指令重排。</p>
+<p><img src="/images/java%E7%BA%BF%E7%A8%8B/%E5%AE%8C%E5%85%A8%E7%A6%81%E6%AD%A2%E6%8C%87%E4%BB%A4%E9%87%8D%E6%8E%92.svg" alt="完全禁止指令重排"></p>
+<p>指令重排是为了优化代码的执行效率，过于严格的限制指令重排，显然会降低代码的执行效率。因此，Java内存模型将volatile的语义定义为：部分禁止指令重排序。</p>
+<p>对volatile修饰的变量执行写操作，Java内存模型只禁止位于其前面的读写操作与其进行重排序，位于其后面的读写操作可以与其进行指令重排序。</p>
+<p>对volatile修饰的变量执行读操作，Java内存模型只禁止位于其后面的读写操作与其进行重排序，位于其前面的读写操作可以与其进行指令重排序。</p>
+<p><img src="/images/java%E7%BA%BF%E7%A8%8B/%E9%83%A8%E5%88%86%E7%A6%81%E6%AD%A2%E6%8C%87%E4%BB%A4%E9%87%8D%E6%8E%92.svg" alt="部分禁止指令重排"></p>
+<p>为了能实现上述细化之后的指令重排禁止规则，Java内存模型定义了4个细粒度的内存屏障（Memory Barrier），也叫做内存栅栏（Memory Fence），它们分别是：StoreStore、StoreLoad、LoadLoad、LoadStore。</p>
+<ul>
+<li><p>在每个 volatile 写操作的前面插入一个 StoreStore 屏障。</p>
+</li>
+<li><p>在每个 volatile 写操作的后面插入一个 StoreLoad 屏障。</p>
+</li>
+<li><p>在每个 volatile 读操作的后面插入一个 LoadLoad 屏障。</p>
+</li>
+<li><p>在每个 volatile 读操作的后面插入一个 LoadStore 屏障。</p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># other ops</span><br><span class="line">[StoreStore]</span><br><span class="line">x = 1 # volatile修饰x变量，volatile写操作</span><br><span class="line">[StoreLoad]</span><br><span class="line">y = x # volatile读操作</span><br><span class="line">[LoadLoad]</span><br><span class="line">[LoadStore]</span><br><span class="line"># other ops</span><br></pre></td></tr></table></figure>
+
+<p><img src="/images/java%E7%BA%BF%E7%A8%8B/volatile%E6%9C%89%E5%BA%8F%E6%80%A7%E9%97%AE%E9%A2%98.svg" alt="volatile有序性问题"></p>
+<h3 id="volatile如何解决部分原子性问题"><a href="#volatile如何解决部分原子性问题" class="headerlink" title="volatile如何解决部分原子性问题"></a>volatile如何解决部分原子性问题</h3><p>两类原子性问题，一类是64位long和double类型数据的读写的原子性问题，另一类是自增语句（例如count++）的原子性问题。volatile可以解决第一类原子性问题，但是无法解决第二类原子性问题。</p>
+<h2 id="synchronized"><a href="#synchronized" class="headerlink" title="synchronized"></a>synchronized</h2><p>synchronized也可以解决可见性、有序性、原子性问题。只不过，它的解决方式比较简单粗暴，让原本并发执行的代码串行执行，并且，每次加锁和释放锁，都会同步CPU缓存和内存中的数据。</p>
+<h2 id="final"><a href="#final" class="headerlink" title="final"></a>final</h2><p>final修饰变量时，初衷是告诉编译器：这个变量生而不变，可以可劲儿优化，这就导致在1.5版本之前优化的很努力，以至于都优化错了，双重检索方法创建单例，构造函数的错误重排导致线程可能看到final变量的值会变化。但是1.5以后已经对final修饰的变量的重排进行了约束。</p>
+<h2 id="happens-before"><a href="#happens-before" class="headerlink" title="happens-before"></a>happens-before</h2><p>概念：前面一个操作的结果对后续操作是可见的。也就是说，happens-before约束了编译器的优化行为，虽允许编译器优化，但是要求编译器优化后一定要遵守happens-before原则。</p>
+<p>happens-before一共有六项规则：</p>
+<h3 id="程序的顺序性规则"><a href="#程序的顺序性规则" class="headerlink" title="程序的顺序性规则"></a>程序的顺序性规则</h3><p>前面的操作happens-before于后续的任意操作。</p>
+<p>例如上面的代码<br>x=42happens-before于v=true;，比较符合单线程的思维，程序前面对某个变量的修改一定是对后续操作可见的。</p>
+<h3 id="volatile变量规则"><a href="#volatile变量规则" class="headerlink" title="volatile变量规则"></a>volatile变量规则</h3><p>对一个volatile变量的写操作，happens-befores与后续对这个变量的读操作。<br>这怎么看都有禁用缓存的意思，貌似和1.5版本之前的语义没有变化，这个时候我们需要关联下一个规则来看这条规则。</p>
+<h3 id="传递性"><a href="#传递性" class="headerlink" title="传递性"></a>传递性</h3><p>a happens-before于 b,b happens-before于c，那么a happens-before与c。</p>
+<ol>
+<li>x = 42 happens-before于 写变量v = true; —-规则1</li>
+<li>写变量v = true happens-before于 读变量v==true。—-规则2</li>
+<li>所以x = 42 happens-before于 读变量v == true;—-规则3</li>
+</ol>
+<p>如果线程b读到了v= true,那么线程a设置的x=42对线程b是可见的。也就是说线程b能看到x=42。</p>
+<h3 id="管程中锁的原则"><a href="#管程中锁的原则" class="headerlink" title="管程中锁的原则"></a>管程中锁的原则</h3><p>对一个锁的解锁happens-before于对后续这个锁的加锁操作。<br>synchronized是java里对管程的实现。</p>
+<p>管程中的锁在java里是隐式实现的，例如下面的代码，在进入同步块之前，会自动加锁，而在代码块执行完会自动释放锁。加锁和解锁的操作都是编译器帮我们实现的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">synchronzied(<span class="built_in">this</span>)&#123;<span class="comment">// 此处自动加锁</span></span><br><span class="line">    <span class="comment">// x 是共享变量，初始值是10；</span></span><br><span class="line">    <span class="keyword">if</span>(<span class="built_in">this</span>.x &lt; <span class="number">12</span>)&#123;</span><br><span class="line">        <span class="built_in">this</span>.x = <span class="number">12</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;<span class="comment">// 此处自动解锁</span></span><br></pre></td></tr></table></figure>
+
+<p>根据管程中锁的原则，线程a执行完代码块后x的值变成12，线程B进入代码块时，能够看到线程a对x的写的操作，也就是线程b能看到x=12。</p>
+<h3 id="start"><a href="#start" class="headerlink" title="start()"></a>start()</h3><p>主线程a启动子线程b后，子线程B能够看到主线程a在启动子线程b前的操作。也就是在线程a中启动了线程b，那么该start()操作happens-before于线程b中任意操作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="variable">x</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line"><span class="type">Thread</span> <span class="variable">B</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(()-&gt;&#123;</span><br><span class="line">    <span class="comment">// 这里能看到变量x的值，x = 12;</span></span><br><span class="line">&#125;);</span><br><span class="line">x = <span class="number">12</span>;</span><br><span class="line">B.start();</span><br></pre></td></tr></table></figure>
+
+<h3 id="join"><a href="#join" class="headerlink" title="join"></a>join</h3><p>主线程a等待子线程b完成(主线程a调用子线程b的join方法实现)，当b完成后(主线程a中join方法返回)，主线程a能够看到子线程b的任意操作。这里都是对共享变量的操作。</p>
+<p>如果在线程a中调用了线程b的join()并成功返回，那么线程b中任意操作happens-before于该join操作的返回。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="variable">x</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line"><span class="type">Thread</span> <span class="variable">b</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(()-&gt;&#123;</span><br><span class="line">    x = <span class="number">11</span>;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">x = <span class="number">12</span>;</span><br><span class="line">b.start();</span><br><span class="line">b.join();</span><br><span class="line"><span class="comment">// x = 11;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="线程中断规则"><a href="#线程中断规则" class="headerlink" title="线程中断规则"></a>线程中断规则</h3><p>线程a调用了线程b的interrupt()方法，happens-before于线程b的代码检测到中断事件的发生。</p>
+<h3 id="对象终结规则"><a href="#对象终结规则" class="headerlink" title="对象终结规则"></a>对象终结规则</h3><p>一个对象初始化完成，happens-before于它的finalize()方法的调用</p>
+<h1 id="CPU缓存一致性协议与可见性"><a href="#CPU缓存一致性协议与可见性" class="headerlink" title="CPU缓存一致性协议与可见性"></a>CPU缓存一致性协议与可见性</h1><h2 id="CPU缓存一致性协议"><a href="#CPU缓存一致性协议" class="headerlink" title="CPU缓存一致性协议"></a>CPU缓存一致性协议</h2><p>目的是为了保证不同CPU之间的缓存数据一致，比较经典的一致性协议就是MESI协议。</p>
+<p>缓存行有4种不同的状态:</p>
+<ul>
+<li><p>已修改Modified (M)</p>
+<p>缓存行是脏的（<em>dirty</em>），与主存的值不同。如果别的CPU内核要读主存这块数据，该缓存行必须回写到主存，状态变为共享(S).</p>
+</li>
+<li><p>独占Exclusive (E)</p>
+<p>缓存行只在当前缓存中，但是干净的（clean）–缓存数据同于主存数据。当别的缓存读取它时，状态变为共享；当前写数据时，变为已修改状态。</p>
+</li>
+<li><p>共享Shared (S)</p>
+<p>缓存行也存在于其它缓存中且是干净的。缓存行可以在任意时刻抛弃。</p>
+</li>
+<li><p>无效Invalid (I)</p>
+<p>缓存行是无效的</p>
+</li>
+</ul>
+<p>我们通过一个例子来深入了解一下MESI缓存行4种不同状态的转移方式，例如我们有3个CPU，分别为CPU0，CPU1，CPU2，初始变量V=1。</p>
+<p><img src="/images/java%E7%BA%BF%E7%A8%8B/cpu%E7%BC%93%E5%AD%98%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE-MESI.svg" alt="cpu缓存一致性协议-MESI"></p>
+<ol>
+<li>第一步，CPU0读取V，CPU0 Cache里的V=1，状态为E。其余CPU Cache没有数据</li>
+<li>第二步，CPU0更新V=2，CPU0 Cache里的V=2，状态为M，Memory里V = 1。其余CPU Cache没有数据</li>
+<li>第三步，CPU1读取V，先通过总线广播一条读请求到其他CPU，CPU0接收到通知后，状态为M，需要将更新后的数据更新到住内存，再将状态变为S，才能响应CPU1的读取请求，并将CPU1 Cache里的缓存行的变为S。</li>
+<li>第四步，CPU2读取V，同第三步</li>
+<li>第五步，CPU2更新V，因为CPU2缓存行里的状态为S，如果需要修改V，则需要先广播其他缓存行状态为S的CPU Cache，将其他CPU上对应的缓存行的状态改为I，并回复invalidate ack消息给CPU2，CPU2收到invalidate ack消息后，更新数据V=3，同步更新到主内存上，CPU2上的缓存行状态则变为E。</li>
+<li>第六步，CPU0读取，发现其CPU缓存行的状态为I，所以CPU0先广播读请求，CPU1不做处理，CPU2上将缓存行的状态改为S，CPU0从内存中读取，并更新缓存行状态为S。</li>
+</ol>
+<h2 id="Store-Buffer"><a href="#Store-Buffer" class="headerlink" title="Store Buffer"></a>Store Buffer</h2><p>从上述第五步中我们可以了解到，当多个CPU共享同一个数据，其中一个CPU更新数据，需要先广播invalidate消息，其他CPU收到invalidate消息后将缓存行状态改为I，然后返回invalidate ack消息给这个CPU，然后这个CPU收到invalidate ack消息后，才能更新数据并同步更新到内存上。这个是非常耗时的一个操作，需要等CPU写操作完成后才能执行其他指令，会影响CPU的执行效率。所以计算机科学家，在CPU和CPU缓存之间增加了Store Buffer，用于完成异步写操作。</p>
+<p>CPU会将写操作的信息存储到Store Buffer后，CPU就可以执行其他操作指令，Store Buffer负责完成广播invalidate消息，接收invalidate ack消息，写入缓存和内存等。</p>
+<p>读取消息的时候也是先从Store Buffer里获取，如果Store Buffer里没有再从缓存和主存里获取。</p>
+<h2 id="Invalidate-Queue"><a href="#Invalidate-Queue" class="headerlink" title="Invalidate Queue"></a>Invalidate Queue</h2><p>Store Buffer发送给其他CPU invalidate消息之后，需要等待其他CPU设置缓存失效并返回invalidate ack消息，才能执行写入缓存和内存的操作。但是其他CPU可能忙于执行其他指令，所以导致store buffer写入缓存和内存操作不及时，有大量的写操作信息存储在Store Buffer里。</p>
+<p>你也许会想到可以扩大Store Buffer的存储空间，来让Store Buffer存储更多的写操作信息。</p>
+<p>计算机科学家则是在Cpu Cache和总线之间设计了一个Invalidate Queue，用于存储invalidate消息和返回invalidate ack消息，并异步执行缓存行状态设置为I的操作。</p>
+<h2 id="CPU缓存一致性协议与可见性-1"><a href="#CPU缓存一致性协议与可见性-1" class="headerlink" title="CPU缓存一致性协议与可见性"></a>CPU缓存一致性协议与可见性</h2><p>如果没有Store Buffer和Invalidate Queue，那么，缓存一致性协议是可以保证各个CPU缓存之间的数据一致性，也就不会存在可见性问题。但是，当引入Store Buffer和Invalidate Queue来异步执行写操作之后，即便使用缓存一致性协议，但各个CPU缓存之间仍然会存在短暂的数据不一致的情况，也就是会存在短暂的可见性问题。</p>
+<p><img src="/images/java%E7%BA%BF%E7%A8%8B/cpu%E7%BC%93%E5%AD%98%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE-StoreBuffer-InvalidateQueue.svg" alt="cpu缓存一致性协议-StoreBuffer-InvalidateQueue"></p>
+<p>可见性案例：</p>
+<ol>
+<li>CPU0和CPU1均读取了内存中的数据a=1到各自的缓存中，对应的缓存行状态均标记为S（共享）。CPU0执行写入操作a=2，为了提高写入的速度，CPU0将写入操作a=2存储到Store Buffer中后就立刻返回。假设此时Store Buffer还没有完成写入缓存和内存操作。</li>
+<li>CPU0读取数据，是直接从Store Buffer里获取到a=2。CPU1读取数据，发现Store Buffer里没有数据，就从缓存里读取到a = 1。此时出现缓存数据不一致的情况。</li>
+<li>假设Cpu0的Store Buffer会发送消息给Cpu1的Invalidate Queue。在Invalidate Queue还没有将失效信息更新到Cpu1的缓存前，Cpu1还是读取不到最新值a=2。</li>
+</ol>
+<p>将写操作写入Store Buffer到Invalidate Queue根据失效信息将Cpu缓存行的状态设置为I的这段时间内，多个Cpu之间的缓存数据会存在短暂不一致的情况</p>
 
     </div>
 
@@ -322,7 +436,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8Bbug%E6%BA%90%E5%A4%B4"><span class="nav-number">1.</span> <span class="nav-text">多线程编程bug源头</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU%E7%BC%93%E5%AD%98-%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">1.1.</span> <span class="nav-text">CPU缓存-可见性问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%88%87%E6%8D%A2-%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">1.2.</span> <span class="nav-text">线程切换-原子性问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E4%BC%98%E5%8C%96-%E6%9C%89%E5%BA%8F%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">1.3.</span> <span class="nav-text">编译优化-有序性问题</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8Bbug%E6%BA%90%E5%A4%B4"><span class="nav-number">1.</span> <span class="nav-text">多线程编程bug源头</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU%E7%BC%93%E5%AD%98-%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">1.1.</span> <span class="nav-text">CPU缓存-可见性问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%88%87%E6%8D%A2-%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">1.2.</span> <span class="nav-text">线程切换-原子性问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E6%89%A7%E8%A1%8C-%E6%9C%89%E5%BA%8F%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">1.3.</span> <span class="nav-text">编译执行-有序性问题</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">Java内存模型</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#volatile"><span class="nav-number">2.1.</span> <span class="nav-text">volatile</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#volatile%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">2.1.1.</span> <span class="nav-text">volatile如何解决可见性问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#volatile%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E6%9C%89%E5%BA%8F%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">2.1.2.</span> <span class="nav-text">volatile如何解决有序性问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#volatile%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E9%83%A8%E5%88%86%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98"><span class="nav-number">2.1.3.</span> <span class="nav-text">volatile如何解决部分原子性问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#synchronized"><span class="nav-number">2.2.</span> <span class="nav-text">synchronized</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#final"><span class="nav-number">2.3.</span> <span class="nav-text">final</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#happens-before"><span class="nav-number">2.4.</span> <span class="nav-text">happens-before</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A8%8B%E5%BA%8F%E7%9A%84%E9%A1%BA%E5%BA%8F%E6%80%A7%E8%A7%84%E5%88%99"><span class="nav-number">2.4.1.</span> <span class="nav-text">程序的顺序性规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#volatile%E5%8F%98%E9%87%8F%E8%A7%84%E5%88%99"><span class="nav-number">2.4.2.</span> <span class="nav-text">volatile变量规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%A0%E9%80%92%E6%80%A7"><span class="nav-number">2.4.3.</span> <span class="nav-text">传递性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AE%A1%E7%A8%8B%E4%B8%AD%E9%94%81%E7%9A%84%E5%8E%9F%E5%88%99"><span class="nav-number">2.4.4.</span> <span class="nav-text">管程中锁的原则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#start"><span class="nav-number">2.4.5.</span> <span class="nav-text">start()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#join"><span class="nav-number">2.4.6.</span> <span class="nav-text">join</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E4%B8%AD%E6%96%AD%E8%A7%84%E5%88%99"><span class="nav-number">2.4.7.</span> <span class="nav-text">线程中断规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9%E8%B1%A1%E7%BB%88%E7%BB%93%E8%A7%84%E5%88%99"><span class="nav-number">2.4.8.</span> <span class="nav-text">对象终结规则</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#CPU%E7%BC%93%E5%AD%98%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE%E4%B8%8E%E5%8F%AF%E8%A7%81%E6%80%A7"><span class="nav-number">3.</span> <span class="nav-text">CPU缓存一致性协议与可见性</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU%E7%BC%93%E5%AD%98%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE"><span class="nav-number">3.1.</span> <span class="nav-text">CPU缓存一致性协议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Store-Buffer"><span class="nav-number">3.2.</span> <span class="nav-text">Store Buffer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Invalidate-Queue"><span class="nav-number">3.3.</span> <span class="nav-text">Invalidate Queue</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU%E7%BC%93%E5%AD%98%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE%E4%B8%8E%E5%8F%AF%E8%A7%81%E6%80%A7-1"><span class="nav-number">3.4.</span> <span class="nav-text">CPU缓存一致性协议与可见性</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
