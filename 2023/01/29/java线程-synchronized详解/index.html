@@ -31,7 +31,7 @@
 <meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/java-thread-x-key-schronized-8.png">
 <meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E9%94%81%E5%8D%87%E7%BA%A7%E6%B5%81%E7%A8%8B.png">
 <meta property="article:published_time" content="2023-01-29T11:11:54.000Z">
-<meta property="article:modified_time" content="2023-02-02T18:11:46.717Z">
+<meta property="article:modified_time" content="2023-02-06T17:23:14.135Z">
 <meta property="article:author" content="Shawn">
 <meta property="article:tag" content="java线程">
 <meta property="article:tag" content="synchronized">
@@ -186,7 +186,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-03 02:11:46" itemprop="dateModified" datetime="2023-02-03T02:11:46+08:00">2023-02-03</time>
+                <time title="Modified: 2023-02-07 01:23:14" itemprop="dateModified" datetime="2023-02-07T01:23:14+08:00">2023-02-07</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -337,6 +337,8 @@
 <li>虽然会自动释放锁，但如果如果锁的那个方法执行时间较长就会一直占用着不去释放，不能让使用同一把锁的方法继续执行，影响程序的运行。不能设置超时。</li>
 <li>当多个线程尝试获取锁时，未获取到锁的线程会不断的尝试获取锁，而不会发生中断，这样会造成性能消耗。</li>
 <li>不能够实现公平锁</li>
+<li>悲观锁，没有实现乐观锁</li>
+<li>读写锁都需要加锁，没有精细分化</li>
 </ol>
 
     </div>
@@ -360,7 +362,10 @@
     <a href="/2023/01/28/java%E7%BA%BF%E7%A8%8B-jmm%E6%A6%82%E8%BF%B0/" rel="prev" title="java线程-jmm概述">
       <i class="fa fa-chevron-left"></i> java线程-jmm概述
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2023/02/06/java%E7%BA%BF%E7%A8%8B-Lock%E8%AF%A6%E8%A7%A3/" rel="next" title="java线程-Lock详解">
+      java线程-Lock详解 <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -433,7 +438,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-count">8</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
