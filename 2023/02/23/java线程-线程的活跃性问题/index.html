@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="在使用多线程，如果有共享变量被多个线程读写，可能会产生线程安全问题。如果发生线程切换，可能会产生性能问题。实际上，在使用多线程，可能还会产生死锁，活锁，饥饿锁等线程活跃性问题。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="java线程-线程的活跃性问题">
+<meta property="og:url" content="http://example.com/2023/02/23/java%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%9A%84%E6%B4%BB%E8%B7%83%E6%80%A7%E9%97%AE%E9%A2%98/index.html">
+<meta property="og:site_name" content="Shawn Home">
+<meta property="og:description" content="在使用多线程，如果有共享变量被多个线程读写，可能会产生线程安全问题。如果发生线程切换，可能会产生性能问题。实际上，在使用多线程，可能还会产生死锁，活锁，饥饿锁等线程活跃性问题。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E6%AD%BB%E9%94%81%E6%A3%80%E6%B5%8B%E7%AE%97%E6%B3%95.png">
+<meta property="og:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E6%B4%BB%E9%94%81.png">
+<meta property="article:published_time" content="2023-02-22T17:36:25.000Z">
+<meta property="article:modified_time" content="2023-04-24T15:20:12.580Z">
+<meta property="article:author" content="Shawn">
+<meta property="article:tag" content="java线程">
+<meta property="article:tag" content="线程活跃性">
+<meta property="article:tag" content="死锁">
+<meta property="article:tag" content="活锁">
+<meta property="article:tag" content="饥饿锁">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/java%E7%BA%BF%E7%A8%8B/%E6%AD%BB%E9%94%81%E6%A3%80%E6%B5%8B%E7%AE%97%E6%B3%95.png">
+
+<link rel="canonical" href="http://example.com/2023/02/23/java%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%9A%84%E6%B4%BB%E8%B7%83%E6%80%A7%E9%97%AE%E9%A2%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>java线程-线程的活跃性问题 | Shawn Home</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Shawn Home</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/02/23/java%E7%BA%BF%E7%A8%8B-%E7%BA%BF%E7%A8%8B%E7%9A%84%E6%B4%BB%E8%B7%83%E6%80%A7%E9%97%AE%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Shawn">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Shawn Home">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          java线程-线程的活跃性问题
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-02-23 01:36:25" itemprop="dateCreated datePublished" datetime="2023-02-23T01:36:25+08:00">2023-02-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-04-24 23:20:12" itemprop="dateModified" datetime="2023-04-24T23:20:12+08:00">2023-04-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index"><span itemprop="name">java</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>在使用多线程，如果有共享变量被多个线程读写，可能会产生线程安全问题。如果发生线程切换，可能会产生性能问题。实际上，在使用多线程，可能还会产生死锁，活锁，饥饿锁等线程活跃性问题。</p>
+<span id="more"></span>
+
+<h1 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h1><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Account</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="type">int</span> balance;</span><br><span class="line">  <span class="comment">// 转账</span></span><br><span class="line">  <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Account target, <span class="type">int</span> amt)</span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(Account.class) &#123;</span><br><span class="line">      <span class="keyword">if</span> (<span class="built_in">this</span>.balance &gt; amt) &#123;</span><br><span class="line">        <span class="built_in">this</span>.balance -= amt;</span><br><span class="line">        target.balance += amt;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>我们用Account.class作为互斥锁，来解决银行业务里面的转账问题，虽说这个方法不存在并发问题，但是所有账户的操作都是串行的，导致性能太差。</p>
+<p>我们需要两把锁，一把锁锁住this,另一把锁锁住target</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Account</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="type">int</span> balance;</span><br><span class="line">  <span class="comment">// 转账</span></span><br><span class="line">  <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Account target, <span class="type">int</span> amt)</span>&#123;</span><br><span class="line">    <span class="comment">// 锁定转出账户</span></span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="built_in">this</span>) &#123;      <span class="comment">//1        </span></span><br><span class="line">      <span class="comment">// 锁定转入账户</span></span><br><span class="line">      <span class="keyword">synchronized</span>(target) &#123;        <span class="comment">//2   </span></span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">this</span>.balance &gt; amt) &#123;</span><br><span class="line">          <span class="built_in">this</span>.balance -= amt;</span><br><span class="line">          target.balance += amt;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这样账户A转账户B，账户C转账户D就可以并行了。</p>
+<p>我们使用<strong>细粒度锁，可以提高并行度，是性能优化的一个重要手段。但是有可能会导致死锁。</strong></p>
+<h2 id="死锁的定义"><a href="#死锁的定义" class="headerlink" title="死锁的定义"></a>死锁的定义</h2><p><strong>一组互相竞争资源的线程因互相等待，导致“永久”阻塞的现象。</strong></p>
+<p>上述代码如何发生死锁？</p>
+<p>我们假设线程T1执行账户A转账户B的操作，同时线程T2执行账户B转账户A的操作。当T1和T2同时执行到①处的代码时，T1获得了A的锁，T2获得了B的锁。之后T1和T2在执行②时，T1试图获取B的锁时发现，B已经被T2锁定了，所以T1开始等待，T2则试图获取A的锁时，发现A已经被T1锁定，所以T2也开始等待。于是T1和T2会无线等待下去，导致死锁。</p>
+<p>上述代码还算比较简单，能够很快分析出死锁的发生原因，但在实际坏境中，死锁的检测并非这么简单，会出现非常复杂的情况，那么计算机就需要一定的算法来检测死锁。一个比较简单的方法就是有向图+DFS算法来检测有没有环，如果有环，则存在发生死锁的可能，如果没有则不会发生死锁。</p>
+<p><img src="/images/java%E7%BA%BF%E7%A8%8B/%E6%AD%BB%E9%94%81%E6%A3%80%E6%B5%8B%E7%AE%97%E6%B3%95.png" alt="死锁检测算法.png"></p>
+<h2 id="发生死锁的条件"><a href="#发生死锁的条件" class="headerlink" title="发生死锁的条件"></a>发生死锁的条件</h2><ol>
+<li>互斥，共享资源X和Y只能被一个线程占用；</li>
+<li>占有且等待，线程T1已经取得共享资源X，在等待共享资源Y的时候，不释放共享资源X；</li>
+<li>不可抢占，其他线程不能强行抢占线程T1占用的资源；</li>
+<li>循环等待，线程T1等待线程T2占有的资源，线程T2等待线程T1占有的资源，这就是循环等待。</li>
+</ol>
+<h2 id="如何预防死锁"><a href="#如何预防死锁" class="headerlink" title="如何预防死锁"></a>如何预防死锁</h2><p>上述代码有个比较简单预防死锁的做法，就是使用类锁，但类锁粒度太大，会导致转账业务均无法并发执行，严重影响转账业务的执行效率。</p>
+<p><strong>我们只要破坏其中一个发生死锁的条件，就可以成功避免死锁的发生。</strong></p>
+<ol>
+<li>对于占有且等待条件，我们可以一次性申请所有的资源，这样就不存在等待了。</li>
+<li>不可抢占，占用部分资源的线程进一步申请其他资源时，如果申请不到，可以主动释放它占有的资源，这样不可抢占这个条件就破坏掉了。</li>
+<li>循环等待，可以靠按序申请资源来预防。所谓按序申请，是指资源时有线性顺序的，申请时可以先申请资源序号小的，再申请资源序号大的。</li>
+</ol>
+<h3 id="破坏占有且等待条件"><a href="#破坏占有且等待条件" class="headerlink" title="破坏占有且等待条件"></a>破坏占有且等待条件</h3><p>转账操作，需要两个资源：1.转出账户，2.转入账户。我们可以增加一个账本管理员，然后只允许管理员管理账本的转入转出。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Allocator</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> List&lt;Object&gt; als =</span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;();</span><br><span class="line">  <span class="comment">// 一次性申请所有资源</span></span><br><span class="line">  <span class="keyword">synchronized</span> <span class="type">boolean</span> <span class="title function_">apply</span><span class="params">(</span></span><br><span class="line"><span class="params">    Object from, Object to)</span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(als.contains(from) ||</span><br><span class="line">         als.contains(to))&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="literal">false</span>;  </span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      als.add(from);</span><br><span class="line">      als.add(to);  </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 归还资源</span></span><br><span class="line">  <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">free</span><span class="params">(</span></span><br><span class="line"><span class="params">    Object from, Object to)</span>&#123;</span><br><span class="line">    als.remove(from);</span><br><span class="line">    als.remove(to);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Account</span> &#123;</span><br><span class="line">  <span class="comment">// actr 应该为单例</span></span><br><span class="line">  <span class="keyword">private</span> Allocator actr;</span><br><span class="line">  <span class="keyword">private</span> <span class="type">int</span> balance;</span><br><span class="line">  <span class="comment">// 转账</span></span><br><span class="line">  <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Account target, <span class="type">int</span> amt)</span>&#123;</span><br><span class="line">    <span class="comment">// 一次性申请转出账户和转入账户，直到成功</span></span><br><span class="line">    <span class="keyword">while</span>(!actr.apply(<span class="built_in">this</span>, target))</span><br><span class="line">      ；</span><br><span class="line">    <span class="keyword">try</span>&#123;</span><br><span class="line">      <span class="comment">// 锁定转出账户</span></span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="built_in">this</span>)&#123;              </span><br><span class="line">        <span class="comment">// 锁定转入账户</span></span><br><span class="line">        <span class="keyword">synchronized</span>(target)&#123;           </span><br><span class="line">          <span class="keyword">if</span> (<span class="built_in">this</span>.balance &gt; amt)&#123;</span><br><span class="line">            <span class="built_in">this</span>.balance -= amt;</span><br><span class="line">            target.balance += amt;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      actr.free(<span class="built_in">this</span>, target)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="破坏不可抢占条件"><a href="#破坏不可抢占条件" class="headerlink" title="破坏不可抢占条件"></a>破坏不可抢占条件</h3><p>synchronized做不到，lock可以做到。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> <span class="title function_">transfer3</span><span class="params">(Account target, <span class="type">double</span> amt)</span> &#123;</span><br><span class="line">  <span class="keyword">while</span>(<span class="literal">true</span>)&#123;</span><br><span class="line">    lock1.lock();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="type">boolean</span> <span class="variable">tryLock</span> <span class="operator">=</span> lock2.tryLock();</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (tryLock &amp;&amp; (<span class="built_in">this</span>.balance &gt; amt)) &#123;</span><br><span class="line">          <span class="built_in">this</span>.balance -= amt;</span><br><span class="line">          target.balance += amt;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">      &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        lock2.unlock();</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">RuntimeException</span>(e);</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      lock1.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="破坏循环等待条件"><a href="#破坏循环等待条件" class="headerlink" title="破坏循环等待条件"></a>破坏循环等待条件</h3><p>我们假设每个账户都有不同的id，这个id可以作为排序字段，申请的时候，我们可以按照从小到大的顺序申请。</p>
+<p>1-6处的代码对转出账户this,和转入账户target排序。然后按照序号从小到大的顺序锁定账户。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Account</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="type">int</span> id;</span><br><span class="line">  <span class="keyword">private</span> <span class="type">int</span> balance;</span><br><span class="line">  <span class="comment">// 转账</span></span><br><span class="line">  <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Account target, <span class="type">int</span> amt)</span>&#123;</span><br><span class="line">    <span class="type">Account</span> <span class="variable">left</span> <span class="operator">=</span> <span class="built_in">this</span>        <span class="comment">//1</span></span><br><span class="line">    <span class="type">Account</span> <span class="variable">right</span> <span class="operator">=</span> target;    <span class="comment">//2</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">this</span>.id &gt; target.id) &#123; <span class="comment">//3</span></span><br><span class="line">      left = target;           <span class="comment">//4</span></span><br><span class="line">      right = <span class="built_in">this</span>;            <span class="comment">//5</span></span><br><span class="line">    &#125;                          <span class="comment">//6</span></span><br><span class="line">    <span class="comment">// 锁定序号小的账户</span></span><br><span class="line">    <span class="keyword">synchronized</span>(left)&#123;</span><br><span class="line">      <span class="comment">// 锁定序号大的账户</span></span><br><span class="line">      <span class="keyword">synchronized</span>(right)&#123; </span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">this</span>.balance &gt; amt)&#123;</span><br><span class="line">          <span class="built_in">this</span>.balance -= amt;</span><br><span class="line">          target.balance += amt;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h1 id="活锁"><a href="#活锁" class="headerlink" title="活锁"></a>活锁</h1><p>预防死锁的方式二（破坏不可抢占的条件）存在问题。</p>
+<p><img src="/images/java%E7%BA%BF%E7%A8%8B/%E6%B4%BB%E9%94%81.png" alt="活锁"></p>
+<p>线程t1和t2一直循坏加锁，尝试加锁，释放锁，我们把这种情况叫做活锁。</p>
+<p>死锁与活锁的区别：处于死锁状态的两个线程均处于阻塞状态，不消耗cpu资源，但活锁线程处于一直循坏加锁，尝试加锁，释放锁的状态，非常消耗cpu资源。</p>
+<p>预防活锁的方法也很简单，只需要调用tryLock的超时方法，随机sleep一段时间即可。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">lock1.lock();</span><br><span class="line"><span class="type">Random</span> <span class="variable">r</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Random</span>();</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">  <span class="type">boolean</span> <span class="variable">tryLock</span> <span class="operator">=</span> <span class="literal">false</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    tryLock = lock2.tryLock(r.nextLong() % <span class="number">10</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (tryLock &amp;&amp; (<span class="built_in">this</span>.balance &gt; amt)) &#123;</span><br><span class="line">      <span class="built_in">this</span>.balance -= amt;</span><br><span class="line">      target.balance += amt;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    lock2.unlock();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">RuntimeException</span>(e);</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">  lock1.unlock();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="饥饿锁"><a href="#饥饿锁" class="headerlink" title="饥饿锁"></a>饥饿锁</h1><p>死锁和活锁是两个或者两个以上线程的整体状态，饥饿则是一个线程的状态，死锁和活锁都会导致线程处于饥饿状态，一直获取不到锁。</p>
+<p>非公平锁由于新来的线程不需要排队，就可以竞争锁，所以排队中的线程就有可能一直竞争不到锁，就会出现饥饿现象。</p>
+<p>自旋+CAS也有可能一直无法成功执行CAS，导致一直自旋，从而出现饥饿现象。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/java%E7%BA%BF%E7%A8%8B/" rel="tag"># java线程</a>
+              <a href="/tags/%E7%BA%BF%E7%A8%8B%E6%B4%BB%E8%B7%83%E6%80%A7/" rel="tag"># 线程活跃性</a>
+              <a href="/tags/%E6%AD%BB%E9%94%81/" rel="tag"># 死锁</a>
+              <a href="/tags/%E6%B4%BB%E9%94%81/" rel="tag"># 活锁</a>
+              <a href="/tags/%E9%A5%A5%E9%A5%BF%E9%94%81/" rel="tag"># 饥饿锁</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/02/22/jvm-%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6/" rel="prev" title="jvm-java编译原理和类加载机制">
+      <i class="fa fa-chevron-left"></i> jvm-java编译原理和类加载机制
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/03/06/spark%E4%BB%8B%E7%BB%8D/" rel="next" title="spark介绍">
+      spark介绍 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%AD%BB%E9%94%81"><span class="nav-number">1.</span> <span class="nav-text">死锁</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="nav-number">1.1.</span> <span class="nav-text">死锁的定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%91%E7%94%9F%E6%AD%BB%E9%94%81%E7%9A%84%E6%9D%A1%E4%BB%B6"><span class="nav-number">1.2.</span> <span class="nav-text">发生死锁的条件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E9%A2%84%E9%98%B2%E6%AD%BB%E9%94%81"><span class="nav-number">1.3.</span> <span class="nav-text">如何预防死锁</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A0%B4%E5%9D%8F%E5%8D%A0%E6%9C%89%E4%B8%94%E7%AD%89%E5%BE%85%E6%9D%A1%E4%BB%B6"><span class="nav-number">1.3.1.</span> <span class="nav-text">破坏占有且等待条件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A0%B4%E5%9D%8F%E4%B8%8D%E5%8F%AF%E6%8A%A2%E5%8D%A0%E6%9D%A1%E4%BB%B6"><span class="nav-number">1.3.2.</span> <span class="nav-text">破坏不可抢占条件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A0%B4%E5%9D%8F%E5%BE%AA%E7%8E%AF%E7%AD%89%E5%BE%85%E6%9D%A1%E4%BB%B6"><span class="nav-number">1.3.3.</span> <span class="nav-text">破坏循环等待条件</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B4%BB%E9%94%81"><span class="nav-number">2.</span> <span class="nav-text">活锁</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A5%A5%E9%A5%BF%E9%94%81"><span class="nav-number">3.</span> <span class="nav-text">饥饿锁</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Shawn</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Shawn</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
